@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports | Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/forms.css">
+  </head>
+  <body class="app-page" data-page="reports">
+    <div class="app-shell">
+      <aside class="sidebar" id="appSidebar">
+        <a href="dashboard.html" class="sidebar-brand">
+          <span class="logo-mark">ET</span>
+          <span>ExpenseTracker</span>
+        </a>
+        <nav class="side-nav">
+          <a href="dashboard.html" class="side-link" data-nav="dashboard">Dashboard</a>
+          <a href="add-expense.html" class="side-link" data-nav="add-expense">Add Expense</a>
+          <a href="expenses.html" class="side-link" data-nav="expenses">Expenses</a>
+          <a href="reports.html" class="side-link" data-nav="reports">Reports</a>
+          <a href="profile.html" class="side-link" data-nav="profile">Profile</a>
+          <a href="login.html" class="side-link">Logout</a>
+        </nav>
+      </aside>
+
+      <div class="app-main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="mobileSidebarToggle" class="icon-btn" type="button" aria-label="Toggle sidebar">
+              Menu
+            </button>
+            <div>
+              <h1>Reports &amp; Analytics</h1>
+              <p id="topbarDate"></p>
+            </div>
+          </div>
+          <div class="topbar-right">
+            <button id="exportCsvBtn" class="btn btn-primary btn-sm" type="button">Export CSV</button>
+          </div>
+        </header>
+
+        <main class="app-content">
+          <section class="panel">
+            <div class="report-filters">
+              <div class="field">
+                <label for="reportStart">Start date</label>
+                <input id="reportStart" type="date">
+              </div>
+              <div class="field">
+                <label for="reportEnd">End date</label>
+                <input id="reportEnd" type="date">
+              </div>
+              <div class="field align-end">
+                <button id="applyReportFilter" type="button" class="btn btn-secondary">Apply Filter</button>
+              </div>
+            </div>
+
+            <div class="stat-grid report-stats">
+              <article class="stat-card">
+                <p>Total Spent</p>
+                <h3 id="reportTotalSpent">$0.00</h3>
+              </article>
+              <article class="stat-card">
+                <p>Average Expense</p>
+                <h3 id="reportAverageSpent">$0.00</h3>
+              </article>
+              <article class="stat-card">
+                <p>Total Transactions</p>
+                <h3 id="reportTotalCount">0</h3>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel-grid report-charts">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Monthly Expense Trend</h2>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="reportTrendChart"></canvas>
+              </div>
+            </article>
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Category Distribution</h2>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="reportCategoryChart"></canvas>
+              </div>
+            </article>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Income vs Expense</h2>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="reportIncomeExpenseChart"></canvas>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/script.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
+</html>

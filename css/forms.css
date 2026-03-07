@@ -1,0 +1,251 @@
+.auth-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(47, 107, 255, 0.2), transparent 34%),
+    radial-gradient(circle at 100% 0%, rgba(17, 185, 129, 0.22), transparent 32%),
+    var(--bg);
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.auth-card {
+  width: min(100%, 460px);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 1.6rem;
+}
+
+.auth-logo {
+  margin-bottom: 0.9rem;
+}
+
+.auth-card h1 {
+  margin: 0;
+  letter-spacing: -0.03em;
+  font-size: 2rem;
+}
+
+.auth-card > p {
+  margin: 0.45rem 0 1rem;
+  color: var(--muted);
+}
+
+.field {
+  margin-bottom: 0.9rem;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 0.42rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 2.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--card), var(--bg-soft) 14%);
+  padding: 0.62rem 0.82rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: 0;
+  border-color: color-mix(in srgb, var(--primary), white 55%);
+  box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.14);
+}
+
+.field input.error,
+.field select.error,
+.field textarea.error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 4px rgba(229, 72, 77, 0.14);
+}
+
+.field-full {
+  grid-column: 1 / -1;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.form-grid.two-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-buttons {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+}
+
+.form-message {
+  margin: 0.72rem 0 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  min-height: 1.4rem;
+}
+
+.form-message.success {
+  color: var(--secondary-dark);
+}
+
+.form-message.error {
+  color: var(--danger);
+}
+
+.input-error {
+  display: block;
+  margin-top: 0.25rem;
+  min-height: 1rem;
+  color: var(--danger);
+  font-size: 0.79rem;
+}
+
+.form-actions-inline {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 0.85rem;
+}
+
+.auth-note {
+  margin: 0.9rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap input {
+  padding-right: 4.5rem;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.38rem;
+  transform: translateY(-50%);
+  border: 0;
+  background: rgba(47, 107, 255, 0.12);
+  color: var(--primary-dark);
+  border-radius: 999px;
+  padding: 0.35rem 0.68rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.strength-meter {
+  margin-top: 0.55rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line), transparent 18%);
+  overflow: hidden;
+}
+
+.strength-meter span {
+  display: block;
+  height: 100%;
+  width: 0;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.strength-text {
+  display: block;
+  margin-top: 0.32rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.strength-weak {
+  background: #ef4444;
+}
+
+.strength-medium {
+  background: #f59e0b;
+}
+
+.strength-strong {
+  background: #10b981;
+}
+
+.toggle-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0.62rem 0.82rem;
+  background: color-mix(in srgb, var(--card), var(--bg-soft) 14%);
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+}
+
+.switch input {
+  display: none;
+}
+
+.switch span {
+  width: 2.75rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  background: #a6b7c8;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.switch span::after {
+  content: "";
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: #ffffff;
+  position: absolute;
+  top: 0.18rem;
+  left: 0.18rem;
+  transition: transform 0.2s ease;
+}
+
+.switch input:checked + span {
+  background: var(--secondary);
+}
+
+.switch input:checked + span::after {
+  transform: translateX(1.2rem);
+}
+
+@media (max-width: 760px) {
+  .form-grid.two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .form-buttons {
+    flex-direction: column;
+  }
+}

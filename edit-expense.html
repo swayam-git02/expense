@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Expense | Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/forms.css">
+  </head>
+  <body class="app-page" data-page="expenses">
+    <div class="app-shell">
+      <aside class="sidebar" id="appSidebar">
+        <a href="dashboard.html" class="sidebar-brand">
+          <span class="logo-mark">ET</span>
+          <span>ExpenseTracker</span>
+        </a>
+        <nav class="side-nav">
+          <a href="dashboard.html" class="side-link" data-nav="dashboard">Dashboard</a>
+          <a href="add-expense.html" class="side-link" data-nav="add-expense">Add Expense</a>
+          <a href="expenses.html" class="side-link" data-nav="expenses">Expenses</a>
+          <a href="reports.html" class="side-link" data-nav="reports">Reports</a>
+          <a href="profile.html" class="side-link" data-nav="profile">Profile</a>
+          <a href="login.html" class="side-link">Logout</a>
+        </nav>
+      </aside>
+
+      <div class="app-main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="mobileSidebarToggle" class="icon-btn" type="button" aria-label="Toggle sidebar">
+              Menu
+            </button>
+            <div>
+              <h1>Edit Expense</h1>
+              <p id="topbarDate"></p>
+            </div>
+          </div>
+        </header>
+
+        <main class="app-content">
+          <section id="editNotFound" class="panel hidden-state">
+            <h2>Expense not found</h2>
+            <p>The selected item may have been deleted.</p>
+            <a href="expenses.html" class="btn btn-primary">Back to Expenses</a>
+          </section>
+
+          <section id="editExpensePanel" class="panel form-panel">
+            <div class="panel-head">
+              <h2>Update Expense Details</h2>
+            </div>
+            <form id="editExpenseForm" class="app-form" novalidate>
+              <input id="expenseId" name="expenseId" type="hidden">
+              <div class="form-grid two-col">
+                <div class="field">
+                  <label for="editExpenseTitle">Expense title</label>
+                  <input id="editExpenseTitle" name="title" type="text" required>
+                  <small class="input-error" data-error-for="title"></small>
+                </div>
+                <div class="field">
+                  <label for="editExpenseAmount">Amount</label>
+                  <input id="editExpenseAmount" name="amount" type="number" min="0.01" step="0.01" required>
+                  <small class="input-error" data-error-for="amount"></small>
+                </div>
+                <div class="field">
+                  <label for="editExpenseCategory">Category</label>
+                  <select id="editExpenseCategory" name="category" required>
+                    <option value="">Select category</option>
+                    <option value="Food">Food</option>
+                    <option value="Travel">Travel</option>
+                    <option value="Bills">Bills</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <small class="input-error" data-error-for="category"></small>
+                </div>
+                <div class="field">
+                  <label for="editExpenseDate">Date</label>
+                  <input id="editExpenseDate" name="date" type="date" required>
+                  <small class="input-error" data-error-for="date"></small>
+                </div>
+                <div class="field">
+                  <label for="editExpensePayment">Payment method</label>
+                  <select id="editExpensePayment" name="payment" required>
+                    <option value="">Select payment</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                  </select>
+                  <small class="input-error" data-error-for="payment"></small>
+                </div>
+                <div class="field field-full">
+                  <label for="editExpenseNotes">Notes</label>
+                  <textarea id="editExpenseNotes" name="notes" rows="4"></textarea>
+                </div>
+              </div>
+              <div class="form-buttons">
+                <button type="submit" class="btn btn-primary">Update Expense</button>
+                <a href="expenses.html" class="btn btn-secondary">Cancel</a>
+              </div>
+              <p id="editExpenseMessage" class="form-message"></p>
+            </form>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/expenses.js"></script>
+  </body>
+</html>

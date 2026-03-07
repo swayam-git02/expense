@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expenses | Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/forms.css">
+  </head>
+  <body class="app-page" data-page="expenses">
+    <div class="app-shell">
+      <aside class="sidebar" id="appSidebar">
+        <a href="dashboard.html" class="sidebar-brand">
+          <span class="logo-mark">ET</span>
+          <span>ExpenseTracker</span>
+        </a>
+        <nav class="side-nav">
+          <a href="dashboard.html" class="side-link" data-nav="dashboard">Dashboard</a>
+          <a href="add-expense.html" class="side-link" data-nav="add-expense">Add Expense</a>
+          <a href="expenses.html" class="side-link" data-nav="expenses">Expenses</a>
+          <a href="reports.html" class="side-link" data-nav="reports">Reports</a>
+          <a href="profile.html" class="side-link" data-nav="profile">Profile</a>
+          <a href="login.html" class="side-link">Logout</a>
+        </nav>
+      </aside>
+
+      <div class="app-main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="mobileSidebarToggle" class="icon-btn" type="button" aria-label="Toggle sidebar">
+              Menu
+            </button>
+            <div>
+              <h1>Expense History</h1>
+              <p id="topbarDate"></p>
+            </div>
+          </div>
+          <div class="topbar-right">
+            <a href="add-expense.html" class="btn btn-primary btn-sm">Add New</a>
+          </div>
+        </header>
+
+        <main class="app-content">
+          <section class="panel">
+            <div class="table-tools">
+              <div class="field">
+                <label for="searchExpenses">Search expenses</label>
+                <input id="searchExpenses" type="search" placeholder="Search by title or payment">
+              </div>
+              <div class="field">
+                <label for="filterCategory">Filter by category</label>
+                <select id="filterCategory">
+                  <option value="all">All categories</option>
+                  <option value="Food">Food</option>
+                  <option value="Travel">Travel</option>
+                  <option value="Bills">Bills</option>
+                  <option value="Shopping">Shopping</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="sortDate">Sort by date</label>
+                <select id="sortDate">
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="expense-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Payment</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="expensesTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div class="modal" id="deleteModal" aria-hidden="true">
+      <div class="modal-card">
+        <h3>Delete Expense</h3>
+        <p id="deleteModalText">Are you sure you want to delete this expense?</p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/expenses.js"></script>
+  </body>
+</html>

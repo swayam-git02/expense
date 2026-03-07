@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/forms.css">
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell">
+      <section class="auth-card">
+        <a href="index.html" class="logo auth-logo">
+          <span class="logo-mark">ET</span>
+          <span class="logo-text">ExpenseTracker</span>
+        </a>
+        <h1>Create account</h1>
+        <p>Start tracking your finances in minutes.</p>
+
+        <form id="registerForm" novalidate>
+          <div class="field">
+            <label for="registerName">Full name</label>
+            <input
+              id="registerName"
+              name="fullName"
+              type="text"
+              placeholder="Your full name"
+              autocomplete="name"
+              required
+            >
+            <small class="input-error" data-error-for="fullName"></small>
+          </div>
+
+          <div class="field">
+            <label for="registerEmail">Email</label>
+            <input
+              id="registerEmail"
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              required
+            >
+            <small class="input-error" data-error-for="email"></small>
+          </div>
+
+          <div class="field">
+            <label for="registerPassword">Password</label>
+            <div class="password-wrap">
+              <input
+                id="registerPassword"
+                name="password"
+                type="password"
+                placeholder="At least 8 characters"
+                autocomplete="new-password"
+                required
+              >
+              <button
+                class="password-toggle"
+                type="button"
+                data-toggle-password
+                data-target="registerPassword"
+              >
+                Show
+              </button>
+            </div>
+            <div class="strength-meter">
+              <span id="passwordStrengthBar"></span>
+            </div>
+            <small id="passwordStrengthText" class="strength-text">Password strength</small>
+            <small class="input-error" data-error-for="password"></small>
+          </div>
+
+          <div class="field">
+            <label for="registerConfirmPassword">Confirm password</label>
+            <input
+              id="registerConfirmPassword"
+              name="confirmPassword"
+              type="password"
+              placeholder="Re-enter password"
+              autocomplete="new-password"
+              required
+            >
+            <small class="input-error" data-error-for="confirmPassword"></small>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+          <p id="registerMessage" class="form-message"></p>
+        </form>
+
+        <p class="auth-note">
+          Already have an account?
+          <a href="login.html" class="text-link">Login</a>
+        </p>
+      </section>
+    </main>
+
+    <script src="js/script.js"></script>
+  </body>
+</html>

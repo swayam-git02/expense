@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+  </head>
+  <body class="app-page" data-page="dashboard">
+    <div class="app-shell">
+      <aside class="sidebar" id="appSidebar">
+        <a href="dashboard.html" class="sidebar-brand">
+          <span class="logo-mark">ET</span>
+          <span>ExpenseTracker</span>
+        </a>
+        <nav class="side-nav">
+          <a href="dashboard.html" class="side-link" data-nav="dashboard">Dashboard</a>
+          <a href="add-expense.html" class="side-link" data-nav="add-expense">Add Expense</a>
+          <a href="expenses.html" class="side-link" data-nav="expenses">Expenses</a>
+          <a href="reports.html" class="side-link" data-nav="reports">Reports</a>
+          <a href="profile.html" class="side-link" data-nav="profile">Profile</a>
+          <a href="login.html" class="side-link">Logout</a>
+        </nav>
+      </aside>
+
+      <div class="app-main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="mobileSidebarToggle" class="icon-btn" type="button" aria-label="Toggle sidebar">
+              Menu
+            </button>
+            <div>
+              <h1>Dashboard</h1>
+              <p id="topbarDate"></p>
+            </div>
+          </div>
+          <div class="topbar-right">
+            <span class="chip">Currency: <strong data-current-currency>USD</strong></span>
+            <span class="user-pill">
+              <img class="avatar" data-user-avatar alt="User avatar">
+              <span data-user-name>Alex Carter</span>
+            </span>
+          </div>
+        </header>
+
+        <main class="app-content">
+          <section class="stat-grid">
+            <article class="stat-card">
+              <p>Total Balance</p>
+              <h3 id="metricBalance">$0.00</h3>
+            </article>
+            <article class="stat-card">
+              <p>Total Income</p>
+              <h3 id="metricIncome">$0.00</h3>
+            </article>
+            <article class="stat-card">
+              <p>Total Expenses</p>
+              <h3 id="metricExpenses">$0.00</h3>
+            </article>
+            <article class="stat-card">
+              <p>Monthly Spending</p>
+              <h3 id="metricMonthly">$0.00</h3>
+            </article>
+          </section>
+
+          <section class="panel-grid">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Recent Transactions</h2>
+              </div>
+              <ul id="recentTransactionsList" class="transaction-list"></ul>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Expense Categories</h2>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="dashboardCategoryChart"></canvas>
+              </div>
+            </article>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Monthly Expense Overview</h2>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="dashboardMonthlyChart"></canvas>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/script.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
+</html>

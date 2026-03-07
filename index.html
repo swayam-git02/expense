@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker | Track Your Expenses Smartly</title>
+    <meta
+      name="description"
+      content="Modern fintech expense tracker with analytics, budgeting, and secure insights."
+    >
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body class="landing-page">
+    <header class="landing-header">
+      <nav class="container landing-nav">
+        <a href="#home" class="logo">
+          <span class="logo-mark">ET</span>
+          <span class="logo-text">ExpenseTracker</span>
+        </a>
+
+        <button
+          class="menu-toggle"
+          type="button"
+          data-menu-toggle
+          aria-label="Toggle menu"
+          aria-expanded="false"
+          aria-controls="landingMenu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        <div class="landing-menu" id="landingMenu" data-menu>
+          <a href="#home">Home</a>
+          <a href="#features">Features</a>
+          <a href="#pricing">Pricing</a>
+          <a href="login.html">Login</a>
+          <a href="register.html" class="btn btn-primary btn-sm">Sign Up</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section id="home" class="hero-section">
+        <div class="container hero-grid">
+          <div class="hero-copy reveal">
+            <p class="eyebrow">Finance, simplified</p>
+            <h1>Track Your Expenses Smartly</h1>
+            <p>
+              Control spending, monitor trends, and gain clarity with a modern
+              dashboard built for people who want better financial decisions.
+            </p>
+            <div class="hero-actions">
+              <a href="register.html" class="btn btn-primary">Get Started</a>
+              <a href="login.html" class="btn btn-secondary">Login</a>
+            </div>
+          </div>
+
+          <div class="hero-card reveal">
+            <h3>Monthly Snapshot</h3>
+            <p class="hero-card-subtitle">Last 30 days</p>
+            <div class="hero-stat-row">
+              <div>
+                <span>Total Spending</span>
+                <strong>$2,140</strong>
+              </div>
+              <div>
+                <span>Saved</span>
+                <strong class="positive">$860</strong>
+              </div>
+            </div>
+            <div class="hero-bars" aria-hidden="true">
+              <span style="--h: 45%"></span>
+              <span style="--h: 65%"></span>
+              <span style="--h: 50%"></span>
+              <span style="--h: 80%"></span>
+              <span style="--h: 60%"></span>
+              <span style="--h: 88%"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section">
+        <div class="container">
+          <div class="section-head reveal">
+            <p class="eyebrow">Features</p>
+            <h2>Everything needed for smart money control</h2>
+          </div>
+          <div class="feature-grid">
+            <article class="feature-card reveal">
+              <h3>Expense Tracking</h3>
+              <p>Track every transaction with category-level visibility.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3>Budget Management</h3>
+              <p>Set monthly goals and monitor progress in real time.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3>Analytics &amp; Reports</h3>
+              <p>Turn spending data into trends and actionable reports.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3>Secure Data</h3>
+              <p>Local-first flow with clean and safe data handling.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" class="section section-soft">
+        <div class="container">
+          <div class="section-head reveal">
+            <p class="eyebrow">Pricing</p>
+            <h2>Choose the right plan for your workflow</h2>
+          </div>
+          <div class="pricing-grid">
+            <article class="pricing-card reveal">
+              <h3>Free</h3>
+              <p class="price">$0<span>/month</span></p>
+              <ul>
+                <li>Basic expense tracking</li>
+                <li>Category summary</li>
+                <li>1 user</li>
+              </ul>
+              <a href="register.html" class="btn btn-secondary btn-block">Start Free</a>
+            </article>
+            <article class="pricing-card featured reveal">
+              <h3>Pro</h3>
+              <p class="price">$12<span>/month</span></p>
+              <ul>
+                <li>Advanced reports</li>
+                <li>Budget alerts</li>
+                <li>CSV export</li>
+              </ul>
+              <a href="register.html" class="btn btn-primary btn-block">Get Pro</a>
+            </article>
+            <article class="pricing-card reveal">
+              <h3>Premium</h3>
+              <p class="price">$24<span>/month</span></p>
+              <ul>
+                <li>Team-ready workspace</li>
+                <li>Priority support</li>
+                <li>Enhanced security</li>
+              </ul>
+              <a href="register.html" class="btn btn-secondary btn-block">Go Premium</a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-head reveal">
+            <p class="eyebrow">Testimonials</p>
+            <h2>Loved by modern finance-focused users</h2>
+          </div>
+          <div class="testimonial-grid">
+            <article class="testimonial-card reveal">
+              <p>"This app made our monthly planning clear in one dashboard."</p>
+              <strong>Riya Sharma</strong>
+            </article>
+            <article class="testimonial-card reveal">
+              <p>"The reports are exactly what I needed for spending control."</p>
+              <strong>Daniel Reed</strong>
+            </article>
+            <article class="testimonial-card reveal">
+              <p>"Simple UI, smooth workflow, and useful category analytics."</p>
+              <strong>Ananya Patel</strong>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="landing-footer">
+      <div class="container landing-footer-inner">
+        <div>
+          <a href="#home" class="logo">
+            <span class="logo-mark">ET</span>
+            <span class="logo-text">ExpenseTracker</span>
+          </a>
+          <p>Modern expense tracking for better financial decisions.</p>
+        </div>
+        <div class="footer-socials">
+          <a href="#">LinkedIn</a>
+          <a href="#">X</a>
+          <a href="#">Instagram</a>
+          <a href="#">YouTube</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/forms.css">
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell">
+      <section class="auth-card">
+        <a href="index.html" class="logo auth-logo">
+          <span class="logo-mark">ET</span>
+          <span class="logo-text">ExpenseTracker</span>
+        </a>
+        <h1>Welcome back</h1>
+        <p>Log in to continue managing your expenses.</p>
+
+        <form id="loginForm" novalidate>
+          <div class="field">
+            <label for="loginEmail">Email</label>
+            <input
+              id="loginEmail"
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              required
+            >
+            <small class="input-error" data-error-for="email"></small>
+          </div>
+
+          <div class="field">
+            <label for="loginPassword">Password</label>
+            <div class="password-wrap">
+              <input
+                id="loginPassword"
+                name="password"
+                type="password"
+                placeholder="Enter password"
+                autocomplete="current-password"
+                required
+              >
+              <button
+                class="password-toggle"
+                type="button"
+                data-toggle-password
+                data-target="loginPassword"
+              >
+                Show
+              </button>
+            </div>
+            <small class="input-error" data-error-for="password"></small>
+          </div>
+
+          <div class="form-actions-inline">
+            <a href="#" class="text-link">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">Login</button>
+          <p id="loginMessage" class="form-message"></p>
+        </form>
+
+        <p class="auth-note">
+          New here?
+          <a href="register.html" class="text-link">Create an account</a>
+        </p>
+      </section>
+    </main>
+
+    <script src="js/script.js"></script>
+  </body>
+</html>

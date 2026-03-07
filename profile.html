@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile | Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/forms.css">
+  </head>
+  <body class="app-page" data-page="profile">
+    <div class="app-shell">
+      <aside class="sidebar" id="appSidebar">
+        <a href="dashboard.html" class="sidebar-brand">
+          <span class="logo-mark">ET</span>
+          <span>ExpenseTracker</span>
+        </a>
+        <nav class="side-nav">
+          <a href="dashboard.html" class="side-link" data-nav="dashboard">Dashboard</a>
+          <a href="add-expense.html" class="side-link" data-nav="add-expense">Add Expense</a>
+          <a href="expenses.html" class="side-link" data-nav="expenses">Expenses</a>
+          <a href="reports.html" class="side-link" data-nav="reports">Reports</a>
+          <a href="profile.html" class="side-link" data-nav="profile">Profile</a>
+          <a href="login.html" class="side-link">Logout</a>
+        </nav>
+      </aside>
+
+      <div class="app-main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="mobileSidebarToggle" class="icon-btn" type="button" aria-label="Toggle sidebar">
+              Menu
+            </button>
+            <div>
+              <h1>Profile &amp; Settings</h1>
+              <p id="topbarDate"></p>
+            </div>
+          </div>
+        </header>
+
+        <main class="app-content profile-layout">
+          <section class="panel form-panel">
+            <div class="panel-head">
+              <h2>Profile Info</h2>
+            </div>
+            <form id="profileForm" class="app-form" novalidate>
+              <div class="profile-preview">
+                <img id="avatarPreview" class="avatar avatar-large" alt="Avatar preview">
+              </div>
+              <div class="form-grid two-col">
+                <div class="field">
+                  <label for="profileName">Full name</label>
+                  <input id="profileName" name="name" type="text" required>
+                  <small class="input-error" data-error-for="name"></small>
+                </div>
+                <div class="field">
+                  <label for="profileEmail">Email</label>
+                  <input id="profileEmail" name="email" type="email" required>
+                  <small class="input-error" data-error-for="email"></small>
+                </div>
+                <div class="field">
+                  <label for="avatarUrl">Avatar URL</label>
+                  <input id="avatarUrl" name="avatar" type="url" placeholder="https://example.com/avatar.png">
+                </div>
+                <div class="field">
+                  <label for="currencySelect">Currency</label>
+                  <select id="currencySelect" name="currency">
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="INR">INR - Indian Rupee</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="monthlyIncome">Monthly income</label>
+                  <input id="monthlyIncome" name="monthlyIncome" type="number" min="0" step="0.01">
+                  <small class="input-error" data-error-for="monthlyIncome"></small>
+                </div>
+                <div class="field toggle-field">
+                  <label for="darkModeToggle">Dark mode</label>
+                  <label class="switch">
+                    <input id="darkModeToggle" type="checkbox">
+                    <span></span>
+                  </label>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Save Profile</button>
+              <p id="profileMessage" class="form-message"></p>
+            </form>
+          </section>
+
+          <section class="panel form-panel">
+            <div class="panel-head">
+              <h2>Change Password</h2>
+            </div>
+            <form id="passwordForm" class="app-form" novalidate>
+              <div class="field">
+                <label for="currentPassword">Current password</label>
+                <input id="currentPassword" name="currentPassword" type="password">
+                <small class="input-error" data-error-for="currentPassword"></small>
+              </div>
+              <div class="field">
+                <label for="newPassword">New password</label>
+                <input id="newPassword" name="newPassword" type="password">
+                <small class="input-error" data-error-for="newPassword"></small>
+              </div>
+              <div class="field">
+                <label for="confirmNewPassword">Confirm new password</label>
+                <input id="confirmNewPassword" name="confirmNewPassword" type="password">
+                <small class="input-error" data-error-for="confirmNewPassword"></small>
+              </div>
+              <button type="submit" class="btn btn-secondary">Update Password</button>
+              <p id="passwordMessage" class="form-message"></p>
+            </form>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
+</html>
