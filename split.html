@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Bill Splitter | Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/forms.css">
+    <link rel="stylesheet" href="css/split.css">
+  </head>
+  <body class="app-page" data-page="split">
+    <div class="app-shell">
+      <aside class="sidebar" id="appSidebar">
+        <a href="dashboard.html" class="sidebar-brand">
+          <span class="logo-mark">ET</span>
+          <span>ExpenseTracker</span>
+        </a>
+        <nav class="side-nav">
+          <a href="dashboard.html" class="side-link" data-nav="dashboard">Dashboard</a>
+          <a href="add-expense.html" class="side-link" data-nav="add-expense">Add Expense</a>
+          <a href="expenses.html" class="side-link" data-nav="expenses">Expenses</a>
+          <a href="reports.html" class="side-link" data-nav="budget-planner">Budget Planner</a>
+          <a href="split.html" class="side-link" data-nav="split">Split Bills</a>
+          <a href="reports.html" class="side-link" data-nav="reports">Reports</a>
+          <a href="profile.html" class="side-link" data-nav="profile">Profile</a>
+          <a href="login.html" class="side-link">Logout</a>
+        </nav>
+      </aside>
+
+      <div class="app-main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button id="mobileSidebarToggle" class="icon-btn" type="button" aria-label="Toggle sidebar">
+              Menu
+            </button>
+            <div>
+              <h1>Trip Bill Splitter</h1>
+              <p id="topbarDate"></p>
+            </div>
+          </div>
+          <div class="topbar-right">
+            <button class="icon-circle" type="button" aria-label="Notifications">
+              <span aria-hidden="true">N</span>
+              <span class="notify-dot" id="splitNotifyCount">0</span>
+            </button>
+            <label class="switch split-theme-switch" title="Dark mode">
+              <input id="splitDarkModeToggle" type="checkbox" aria-label="Dark mode toggle">
+              <span></span>
+            </label>
+            <span class="user-pill">
+              <img class="avatar" data-user-avatar alt="User avatar">
+              <span data-user-name>Alex Carter</span>
+            </span>
+          </div>
+        </header>
+
+        <main class="app-content split-page-content">
+          <section class="split-grid">
+            <article class="panel split-participants-panel">
+              <div class="panel-head">
+                <h2>Participants</h2>
+                <span class="chip" id="participantCountChip">0 members</span>
+              </div>
+              <form id="participantForm" class="app-form participant-form" novalidate>
+                <div class="field">
+                  <label for="participantName">Participant Name</label>
+                  <input id="participantName" name="participantName" type="text" placeholder="Aman" required>
+                  <small class="input-error" data-error-for="participantName"></small>
+                </div>
+                <div class="field">
+                  <label for="participantEmail">Optional Email</label>
+                  <input id="participantEmail" name="participantEmail" type="email" placeholder="aman@email.com">
+                  <small class="input-error" data-error-for="participantEmail"></small>
+                </div>
+                <div class="form-buttons compact">
+                  <button type="submit" class="btn btn-primary">Add Participant</button>
+                  <button type="button" id="clearParticipantsBtn" class="btn btn-secondary">Clear All Participants</button>
+                </div>
+                <p id="participantMessage" class="form-message"></p>
+              </form>
+
+              <div id="participantsList" class="participant-list" aria-live="polite"></div>
+            </article>
+
+            <article class="panel split-form-panel">
+              <div class="panel-head">
+                <h2>Add Split Expense</h2>
+              </div>
+              <form id="splitForm" class="app-form" novalidate>
+                <div class="form-grid two-col">
+                  <div class="field">
+                    <label for="splitTitle">Expense title</label>
+                    <input id="splitTitle" name="splitTitle" type="text" placeholder="Dinner at Bay Grill" required>
+                    <small class="input-error" data-error-for="splitTitle"></small>
+                  </div>
+                  <div class="field">
+                    <label for="splitAmount">Total amount</label>
+                    <input id="splitAmount" name="splitAmount" type="number" min="0.01" step="0.01" placeholder="0.00" required>
+                    <small class="input-error" data-error-for="splitAmount"></small>
+                  </div>
+                  <div class="field">
+                    <label for="splitCategory">Category</label>
+                    <select id="splitCategory" name="splitCategory" required>
+                      <option value="">Select category</option>
+                      <option value="Food">Food</option>
+                      <option value="Travel">Travel</option>
+                      <option value="Hotel">Hotel</option>
+                      <option value="Transport">Transport</option>
+                      <option value="Entertainment">Entertainment</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <small class="input-error" data-error-for="splitCategory"></small>
+                  </div>
+                  <div class="field">
+                    <label for="splitDate">Date</label>
+                    <input id="splitDate" name="splitDate" type="date" required>
+                    <small class="input-error" data-error-for="splitDate"></small>
+                  </div>
+                  <div class="field field-full">
+                    <label for="splitPaidBy">Who paid?</label>
+                    <select id="splitPaidBy" name="splitPaidBy" required></select>
+                    <small class="input-error" data-error-for="splitPaidBy"></small>
+                  </div>
+                </div>
+
+                <div class="split-methods">
+                  <label class="method-pill">
+                    <input type="radio" name="splitMethod" value="equal" checked>
+                    <span>Equal Split</span>
+                  </label>
+                  <label class="method-pill">
+                    <input type="radio" name="splitMethod" value="custom">
+                    <span>Custom Split</span>
+                  </label>
+                  <label class="method-pill">
+                    <input type="radio" name="splitMethod" value="percentage">
+                    <span>Percentage Split</span>
+                  </label>
+                </div>
+                <small class="input-error" data-error-for="splitMethod"></small>
+
+                <div class="field">
+                  <label>Participants involved</label>
+                  <div id="splitParticipantsSelector" class="selector-grid"></div>
+                  <small class="input-error" data-error-for="splitParticipants"></small>
+                </div>
+
+                <div id="splitDistributionInputs" class="distribution-wrap"></div>
+                <small class="input-error" data-error-for="splitDistribution"></small>
+
+                <div class="form-buttons">
+                  <button type="button" id="calculateSplitBtn" class="btn btn-secondary">Calculate Split</button>
+                  <button type="button" id="saveSplitBtn" class="btn btn-primary">Save Split</button>
+                  <button type="reset" class="btn btn-secondary">Reset Form</button>
+                </div>
+                <p id="splitFormMessage" class="form-message"></p>
+              </form>
+            </article>
+          </section>
+
+          <section id="splitResultSection" class="panel hidden-state">
+            <div class="panel-head">
+              <h2>Split Result</h2>
+            </div>
+            <p id="splitPayerSummary" class="result-intro"></p>
+
+            <div class="table-wrap">
+              <table class="expense-table">
+                <thead>
+                  <tr>
+                    <th>Participant</th>
+                    <th>Amount Owed</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="splitResultBody"></tbody>
+              </table>
+            </div>
+
+            <div class="settlement-block">
+              <h3>Settlement Summary</h3>
+              <div id="settlementCards" class="settlement-grid"></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Split History</h2>
+              <button id="exportAllSplitsBtn" type="button" class="btn btn-primary btn-sm">Export Split Report</button>
+            </div>
+
+            <div class="table-tools split-history-tools">
+              <div class="field">
+                <label for="splitSearch">Search split expenses</label>
+                <input id="splitSearch" type="search" placeholder="Search by title or payer">
+              </div>
+              <div class="field">
+                <label for="splitParticipantFilter">Filter by participant</label>
+                <select id="splitParticipantFilter">
+                  <option value="all">All participants</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="splitSort">Sort by date</label>
+                <select id="splitSort">
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="expense-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Expense Title</th>
+                    <th>Total Amount</th>
+                    <th>Participants</th>
+                    <th>Paid By</th>
+                    <th>Split Type</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="splitHistoryBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel-grid split-chart-grid">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Expense Category Pie Chart</h2>
+              </div>
+              <div class="chart-wrap split-chart">
+                <canvas id="splitCategoryChart"></canvas>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Participant Contribution Chart</h2>
+              </div>
+              <div class="chart-wrap split-chart">
+                <canvas id="splitContributionChart"></canvas>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div class="modal" id="splitViewModal" aria-hidden="true">
+      <div class="modal-card split-view-modal-card">
+        <h3>Split Details</h3>
+        <div id="splitViewContent"></div>
+        <div class="modal-actions">
+          <button id="closeSplitViewModalBtn" type="button" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/script.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/split.js"></script>
+  </body>
+</html>
