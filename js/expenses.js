@@ -1,5 +1,6 @@
 (() => {
   const app = window.ExpenseApp || {};
+  let cachedExpenses = [];
 
   function todayIsoDate() {
     return new Date().toISOString().slice(0, 10);
@@ -11,28 +12,19 @@
 
   function setDefaultDate(form) {
     const dateInput = form?.querySelector('[name="date"]');
-    if (!dateInput || dateInput.value) {
-      return;
+    if (dateInput && !dateInput.value) {
+      dateInput.value = todayIsoDate();
     }
-
-    dateInput.value = todayIsoDate();
   }
 
   function readExpenseFromForm(form) {
-    const title = control(form, "title");
-    const amount = control(form, "amount");
-    const category = control(form, "category");
-    const date = control(form, "date");
-    const payment = control(form, "payment");
-    const notes = control(form, "notes");
-
     return {
-      title: String(title?.value || "").trim(),
-      amount: Number(amount?.value || 0),
-      category: String(category?.value || ""),
-      date: String(date?.value || ""),
-      payment: String(payment?.value || ""),
-      notes: String(notes?.value || "").trim(),
+      title: String(control(form, "title")?.value || "").trim(),
+      amount: Number(control(form, "amount")?.value || 0),
+      category: String(control(form, "category")?.value || ""),
+      date: String(control(form, "date")?.value || ""),
+      payment: String(control(form, "payment")?.value || ""),
+      notes: String(control(form, "notes")?.value || "").trim(),
     };
   }
 
@@ -44,22 +36,18 @@
       app.setFieldError?.(form, "title", "Title must be at least 2 characters.");
       hasError = true;
     }
-
     if (!Number.isFinite(expense.amount) || expense.amount <= 0) {
       app.setFieldError?.(form, "amount", "Amount must be greater than 0.");
       hasError = true;
     }
-
     if (!expense.category) {
       app.setFieldError?.(form, "category", "Please select a category.");
       hasError = true;
     }
-
     if (!expense.date) {
       app.setFieldError?.(form, "date", "Please choose a date.");
       hasError = true;
     }
-
     if (!expense.payment) {
       app.setFieldError?.(form, "payment", "Please select a payment method.");
       hasError = true;
@@ -68,7 +56,7 @@
     return !hasError;
   }
 
-  function initAddExpensePage() {
+  async function initAddExpensePage() {
     const form = document.getElementById("addExpenseForm");
     if (!form) {
       return;
@@ -77,7 +65,7 @@
     const messageNode = document.getElementById("addExpenseMessage");
     setDefaultDate(form);
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const expense = readExpenseFromForm(form);
       if (!validateExpenseForm(form, expense)) {
@@ -85,16 +73,14 @@
         return;
       }
 
-      const expenses = app.getExpenses ? app.getExpenses() : [];
-      expenses.push({
-        ...expense,
-        id: app.generateId ? app.generateId() : String(Date.now()),
-      });
-      app.saveExpenses?.(expenses);
-
-      form.reset();
-      setDefaultDate(form);
-      app.showFormMessage?.(messageNode, "Expense saved successfully.", "success");
+      try {
+        await app.createExpense?.(expense);
+        form.reset();
+        setDefaultDate(form);
+        app.showFormMessage?.(messageNode, "Expense saved successfully.", "success");
+      } catch (error) {
+        app.showFormMessage?.(messageNode, error.message, "error");
+      }
     });
 
     form.addEventListener("reset", () => {
@@ -104,7 +90,28 @@
     });
   }
 
-  function initExpensesPage() {
+  function getFilteredExpenses(searchInput, categoryFilter, sortSelect) {
+    const search = searchInput?.value?.trim().toLowerCase() || "";
+    const category = categoryFilter?.value || "all";
+    const sort = sortSelect?.value || "newest";
+
+    const filtered = cachedExpenses.filter((expense) => {
+      const searchable = `${expense.title} ${expense.category} ${expense.payment} ${expense.notes} ${expense.date}`.toLowerCase();
+      const matchesSearch = !search || searchable.includes(search);
+      const matchesCategory = category === "all" || expense.category === category;
+      return matchesSearch && matchesCategory;
+    });
+
+    filtered.sort((a, b) => {
+      const first = new Date(a.date || 0).getTime();
+      const second = new Date(b.date || 0).getTime();
+      return sort === "oldest" ? first - second : second - first;
+    });
+
+    return filtered;
+  }
+
+  async function initExpensesPage() {
     const tableBody = document.getElementById("expensesTableBody");
     if (!tableBody) {
       return;
@@ -116,8 +123,8 @@
 
     const modal = document.getElementById("deleteModal");
     const modalText = document.getElementById("deleteModalText");
-    const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
-    const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+    const cancelDeleteButton = document.getElementById("cancelDeleteBtn");
+    const confirmDeleteButton = document.getElementById("confirmDeleteBtn");
 
     let deleteId = null;
 
@@ -136,31 +143,9 @@
       modal?.setAttribute("aria-hidden", "true");
     }
 
-    function filteredExpenses() {
-      const expenses = app.getExpenses ? app.getExpenses() : [];
-      const search = searchInput?.value?.trim().toLowerCase() || "";
-      const category = categoryFilter?.value || "all";
-      const sort = sortSelect?.value || "newest";
-
-      let result = expenses.filter((expense) => {
-        const searchable = `${expense.title} ${expense.category} ${expense.payment} ${expense.notes} ${expense.date}`.toLowerCase();
-        const matchesSearch = !search || searchable.includes(search);
-        const matchesCategory = category === "all" || expense.category === category;
-        return matchesSearch && matchesCategory;
-      });
-
-      result.sort((a, b) => {
-        const first = new Date(a.date || 0).getTime();
-        const second = new Date(b.date || 0).getTime();
-        return sort === "oldest" ? first - second : second - first;
-      });
-
-      return result;
-    }
-
     function renderExpenses() {
-      const expenses = filteredExpenses();
-      const currency = app.getSettings?.().currency || "USD";
+      const expenses = getFilteredExpenses(searchInput, categoryFilter, sortSelect);
+      const currency = app.getSettings?.().currency || "INR";
       tableBody.innerHTML = "";
 
       if (!expenses.length) {
@@ -193,6 +178,23 @@
       });
     }
 
+    async function loadExpenses() {
+      try {
+        cachedExpenses = await app.fetchExpenses?.();
+      } catch (error) {
+        cachedExpenses = [];
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">${error.message}</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      renderExpenses();
+    }
+
     searchInput?.addEventListener("input", renderExpenses);
     categoryFilter?.addEventListener("change", renderExpenses);
     sortSelect?.addEventListener("change", renderExpenses);
@@ -205,41 +207,47 @@
 
       const action = button.getAttribute("data-action");
       const id = button.getAttribute("data-id");
-
       if (action === "edit") {
         window.location.href = `edit-expense.html?id=${encodeURIComponent(id || "")}`;
         return;
       }
 
       if (action === "delete" && id) {
-        const title = button.getAttribute("data-title") || "this expense";
-        openDeleteModal(id, title);
+        openDeleteModal(id, button.getAttribute("data-title") || "this expense");
       }
     });
 
-    cancelDeleteBtn?.addEventListener("click", closeDeleteModal);
+    cancelDeleteButton?.addEventListener("click", closeDeleteModal);
     modal?.addEventListener("click", (event) => {
       if (event.target === modal) {
         closeDeleteModal();
       }
     });
 
-    confirmDeleteBtn?.addEventListener("click", () => {
+    confirmDeleteButton?.addEventListener("click", async () => {
       if (!deleteId) {
         return;
       }
-
-      const expenses = app.getExpenses ? app.getExpenses() : [];
-      const nextExpenses = expenses.filter((item) => item.id !== deleteId);
-      app.saveExpenses?.(nextExpenses);
-      closeDeleteModal();
-      renderExpenses();
+      try {
+        await app.deleteExpense?.(deleteId);
+        closeDeleteModal();
+        await loadExpenses();
+      } catch (error) {
+        closeDeleteModal();
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">${error.message}</div>
+            </td>
+          </tr>
+        `;
+      }
     });
 
-    renderExpenses();
+    await loadExpenses();
   }
 
-  function initEditExpensePage() {
+  async function initEditExpensePage() {
     const form = document.getElementById("editExpenseForm");
     if (!form) {
       return;
@@ -248,8 +256,7 @@
     const notFound = document.getElementById("editNotFound");
     const panel = document.getElementById("editExpensePanel");
     const messageNode = document.getElementById("editExpenseMessage");
-    const params = new URLSearchParams(window.location.search);
-    const expenseId = params.get("id");
+    const expenseId = new URLSearchParams(window.location.search).get("id");
 
     if (!expenseId) {
       notFound?.classList.remove("hidden-state");
@@ -257,8 +264,13 @@
       return;
     }
 
-    const expenses = app.getExpenses ? app.getExpenses() : [];
-    const existing = expenses.find((item) => item.id === expenseId);
+    let existing = null;
+    try {
+      const expenses = await app.fetchExpenses?.();
+      existing = (expenses || []).find((item) => String(item.id) === String(expenseId));
+    } catch (error) {
+      existing = null;
+    }
 
     if (!existing) {
       notFound?.classList.remove("hidden-state");
@@ -266,27 +278,17 @@
       return;
     }
 
-    if (notFound) {
-      notFound.classList.add("hidden-state");
-    }
+    notFound?.classList.add("hidden-state");
 
-    const idField = control(form, "expenseId");
-    const titleField = control(form, "title");
-    const amountField = control(form, "amount");
-    const categoryField = control(form, "category");
-    const dateField = control(form, "date");
-    const paymentField = control(form, "payment");
-    const notesField = control(form, "notes");
+    if (control(form, "expenseId")) control(form, "expenseId").value = existing.id;
+    if (control(form, "title")) control(form, "title").value = existing.title;
+    if (control(form, "amount")) control(form, "amount").value = String(existing.amount);
+    if (control(form, "category")) control(form, "category").value = existing.category;
+    if (control(form, "date")) control(form, "date").value = existing.date;
+    if (control(form, "payment")) control(form, "payment").value = existing.payment;
+    if (control(form, "notes")) control(form, "notes").value = existing.notes || "";
 
-    if (idField) idField.value = existing.id;
-    if (titleField) titleField.value = existing.title;
-    if (amountField) amountField.value = String(existing.amount);
-    if (categoryField) categoryField.value = existing.category;
-    if (dateField) dateField.value = existing.date;
-    if (paymentField) paymentField.value = existing.payment;
-    if (notesField) notesField.value = existing.notes || "";
-
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const updatedExpense = readExpenseFromForm(form);
       if (!validateExpenseForm(form, updatedExpense)) {
@@ -294,28 +296,21 @@
         return;
       }
 
-      const allExpenses = app.getExpenses ? app.getExpenses() : [];
-      const index = allExpenses.findIndex((item) => item.id === expenseId);
-      if (index < 0) {
-        app.showFormMessage?.(messageNode, "Expense no longer exists.", "error");
-        return;
+      try {
+        await app.updateExpense?.(expenseId, updatedExpense);
+        app.showFormMessage?.(messageNode, "Expense updated. Redirecting...", "success");
+        setTimeout(() => {
+          window.location.href = "expenses.html";
+        }, 450);
+      } catch (error) {
+        app.showFormMessage?.(messageNode, error.message, "error");
       }
-
-      allExpenses[index] = {
-        ...allExpenses[index],
-        ...updatedExpense,
-      };
-      app.saveExpenses?.(allExpenses);
-      app.showFormMessage?.(messageNode, "Expense updated. Redirecting...", "success");
-      setTimeout(() => {
-        window.location.href = "expenses.html";
-      }, 650);
     });
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    initAddExpensePage();
-    initExpensesPage();
-    initEditExpensePage();
+  document.addEventListener("DOMContentLoaded", async () => {
+    await initAddExpensePage();
+    await initExpensesPage();
+    await initEditExpensePage();
   });
 })();

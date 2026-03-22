@@ -1,19 +1,19 @@
 (() => {
   const app = (window.ExpenseApp = window.ExpenseApp || {});
-  const KEYS = {
-    expenses: "expenseTracker.expenses",
-    settings: "expenseTracker.settings",
-    user: "expenseTracker.user",
-  };
 
-  const DEFAULT_SETTINGS = {
+  const API_BASE = "http://localhost:5000/api";
+  const TOKEN_KEY = "expenseTracker.token";
+  const DEFAULT_PROFILE = {
     name: "Alex Carter",
     email: "alex@example.com",
     avatar: "",
-    currency: "USD",
+    currency: "INR",
     darkMode: false,
     monthlyIncome: 5000,
   };
+  const PUBLIC_PAGES = new Set(["", "index.html", "login.html", "register.html", "404.html"]);
+
+  let profileCache = null;
 
   function safeParse(value, fallback) {
     if (!value) {
@@ -27,49 +27,148 @@
     }
   }
 
-  function isValidEmail(value) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  function currentPageName() {
+    const pathname = window.location.pathname || "";
+    const page = pathname.split("/").pop();
+    return page || "";
+  }
+
+  function isPublicPage() {
+    return PUBLIC_PAGES.has(currentPageName());
+  }
+
+  function buildQuery(params = {}) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === "") {
+        return;
+      }
+      searchParams.set(key, String(value));
+    });
+
+    const queryString = searchParams.toString();
+    return queryString ? `?${queryString}` : "";
+  }
+
+  function normalizeProfile(rawProfile) {
+    if (!rawProfile) {
+      return { ...DEFAULT_PROFILE };
+    }
+
+    return {
+      id: rawProfile.id,
+      name: rawProfile.name || DEFAULT_PROFILE.name,
+      email: rawProfile.email || DEFAULT_PROFILE.email,
+      avatar: rawProfile.avatar || "",
+      currency: rawProfile.currency || "INR",
+      darkMode: Boolean(rawProfile.darkMode ?? rawProfile.dark_mode ?? false),
+      monthlyIncome: Number(rawProfile.monthlyIncome ?? rawProfile.monthly_income ?? DEFAULT_PROFILE.monthlyIncome),
+    };
   }
 
   function initialsFromName(name) {
-    const parts = String(name || "")
+    const words = String(name || "")
       .trim()
       .split(/\s+/)
       .filter(Boolean);
-
-    if (!parts.length) {
+    if (!words.length) {
       return "ET";
     }
-
-    return parts
+    return words
       .slice(0, 2)
-      .map((part) => part[0].toUpperCase())
+      .map((word) => word[0].toUpperCase())
       .join("");
   }
 
   function avatarDataUri(name) {
     const initials = initialsFromName(name);
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop offset='0%' stop-color='#2f6bff'/><stop offset='100%' stop-color='#11b981'/></linearGradient></defs><rect width='64' height='64' rx='32' fill='url(#g)'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, sans-serif' font-size='24' fill='white'>${initials}</text></svg>`;
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><defs><linearGradient id='grad' x1='0' x2='1' y1='0' y2='1'><stop offset='0%' stop-color='#2f6bff'/><stop offset='100%' stop-color='#11b981'/></linearGradient></defs><rect width='64' height='64' rx='32' fill='url(#grad)'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, sans-serif' font-size='24' fill='white'>${initials}</text></svg>`;
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   }
 
-  function normalizeExpense(item) {
-    const amount = Number(item.amount);
-    return {
-      id: item.id || app.generateId(),
-      title: String(item.title || ""),
-      amount: Number.isFinite(amount) ? amount : 0,
-      category: String(item.category || "Other"),
-      date: String(item.date || ""),
-      payment: String(item.payment || "Cash"),
-      notes: String(item.notes || ""),
-    };
+  function getToken() {
+    return localStorage.getItem(TOKEN_KEY) || "";
   }
 
-  function updateUserElements() {
+  function setToken(token) {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    }
+  }
+
+  function clearToken() {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+
+  async function request(path, options = {}) {
+    const method = options.method || "GET";
+    const auth = options.auth !== false;
+    const body = options.body;
+    const responseType = options.responseType || "json";
+    const headers = { ...(options.headers || {}) };
+
+    if (body !== undefined && body !== null && responseType === "json") {
+      headers["Content-Type"] = "application/json";
+    }
+
+    if (auth) {
+      const token = getToken();
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
+    const response = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body:
+        body === undefined || body === null
+          ? undefined
+          : headers["Content-Type"] === "application/json"
+            ? JSON.stringify(body)
+            : body,
+    });
+
+    if (responseType === "text") {
+      const textBody = await response.text();
+      if (!response.ok) {
+        throw new Error(`Request failed (${response.status})`);
+      }
+      return textBody;
+    }
+
+    let payload = {};
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = {};
+    }
+
+    if (!response.ok) {
+      if (response.status === 401 && auth) {
+        clearToken();
+        profileCache = null;
+        if (!isPublicPage()) {
+          window.location.href = "login.html";
+        }
+      }
+
+      throw new Error(payload.message || `Request failed (${response.status})`);
+    }
+
+    return payload.data !== undefined ? payload.data : payload;
+  }
+
+  function applyTheme() {
     const settings = app.getSettings();
-    const name = settings.name || DEFAULT_SETTINGS.name;
-    const currency = settings.currency || "USD";
+    document.documentElement.setAttribute("data-theme", settings.darkMode ? "dark" : "light");
+  }
+
+  function refreshUserUi() {
+    const settings = app.getSettings();
+    const name = settings.name || DEFAULT_PROFILE.name;
+    const currency = settings.currency || "INR";
+    const avatar = settings.avatar || avatarDataUri(name);
 
     document.querySelectorAll("[data-user-name]").forEach((node) => {
       node.textContent = name;
@@ -80,55 +179,33 @@
     });
 
     document.querySelectorAll("[data-user-avatar]").forEach((node) => {
-      node.src = settings.avatar || avatarDataUri(name);
+      node.src = avatar;
     });
   }
 
+  app.getToken = getToken;
+  app.setToken = setToken;
+  app.clearToken = clearToken;
+  app.request = request;
   app.generateId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-
-  app.getExpenses = () => {
-    const raw = safeParse(localStorage.getItem(KEYS.expenses), []);
-    return Array.isArray(raw) ? raw.map(normalizeExpense) : [];
-  };
-
-  app.saveExpenses = (expenses) => {
-    localStorage.setItem(KEYS.expenses, JSON.stringify(expenses || []));
-  };
-
-  app.getSettings = () => {
-    const settings = safeParse(localStorage.getItem(KEYS.settings), {});
-    return {
-      ...DEFAULT_SETTINGS,
-      ...(settings || {}),
-      monthlyIncome: Number(settings?.monthlyIncome ?? DEFAULT_SETTINGS.monthlyIncome),
-      darkMode: Boolean(settings?.darkMode),
+  app.applyTheme = applyTheme;
+  app.refreshUserUi = refreshUserUi;
+  app.setTheme = (enabled) => {
+    const current = app.getSettings();
+    profileCache = {
+      ...current,
+      darkMode: Boolean(enabled),
     };
+    applyTheme();
   };
-
-  app.saveSettings = (settings) => {
-    localStorage.setItem(KEYS.settings, JSON.stringify(settings));
-  };
-
-  app.getUser = () => {
-    const user = safeParse(localStorage.getItem(KEYS.user), {});
-    return user && typeof user === "object" ? user : {};
-  };
-
-  app.saveUser = (user) => {
-    localStorage.setItem(KEYS.user, JSON.stringify(user || {}));
-  };
-
-  app.getMonthlyIncome = () => {
-    const value = Number(app.getSettings().monthlyIncome);
-    return Number.isFinite(value) && value >= 0 ? value : DEFAULT_SETTINGS.monthlyIncome;
-  };
-
+  app.getSettings = () => profileCache || { ...DEFAULT_PROFILE };
   app.formatCurrency = (amount, currencyCode) => {
-    const currency = currencyCode || app.getSettings().currency || "USD";
+    const settings = app.getSettings();
+    const currency = currencyCode || settings.currency || "INR";
     const numeric = Number(amount) || 0;
 
     try {
-      return new Intl.NumberFormat("en-US", {
+      return new Intl.NumberFormat("en-IN", {
         style: "currency",
         currency,
         maximumFractionDigits: 2,
@@ -138,17 +215,29 @@
     }
   };
 
+  app.showFormMessage = (node, message, type) => {
+    if (!node) {
+      return;
+    }
+
+    node.textContent = message || "";
+    node.classList.remove("success", "error");
+    if (type) {
+      node.classList.add(type);
+    }
+  };
+
   app.clearFormErrors = (form) => {
     if (!form) {
       return;
     }
 
-    form.querySelectorAll(".input-error").forEach((node) => {
-      node.textContent = "";
+    form.querySelectorAll(".input-error").forEach((errorNode) => {
+      errorNode.textContent = "";
     });
 
-    form.querySelectorAll("input, select, textarea").forEach((node) => {
-      node.classList.remove("error");
+    form.querySelectorAll("input, select, textarea").forEach((fieldNode) => {
+      fieldNode.classList.remove("error");
     });
   };
 
@@ -165,43 +254,111 @@
     }
   };
 
-  app.showFormMessage = (node, message, type) => {
-    if (!node) {
-      return;
-    }
+  app.register = (payload) =>
+    request("/auth/register", {
+      method: "POST",
+      body: payload,
+      auth: false,
+    });
 
-    node.textContent = message || "";
-    node.classList.remove("success", "error");
-    if (type) {
-      node.classList.add(type);
-    }
+  app.login = (payload) =>
+    request("/auth/login", {
+      method: "POST",
+      body: payload,
+      auth: false,
+    });
+
+  app.fetchProfile = async () => {
+    const profile = await request("/user/profile");
+    profileCache = normalizeProfile(profile);
+    refreshUserUi();
+    applyTheme();
+    return profileCache;
   };
 
-  app.applyTheme = () => {
-    const dark = Boolean(app.getSettings().darkMode);
-    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  app.updateProfile = async (payload) => {
+    const profile = await request("/user/profile", {
+      method: "PUT",
+      body: payload,
+    });
+    profileCache = normalizeProfile(profile);
+    refreshUserUi();
+    applyTheme();
+    return profileCache;
   };
 
-  app.setTheme = (enabled) => {
-    const settings = app.getSettings();
-    settings.darkMode = Boolean(enabled);
-    app.saveSettings(settings);
-    app.applyTheme();
-  };
+  app.updatePassword = (payload) =>
+    request("/user/profile/password", {
+      method: "PUT",
+      body: payload,
+    });
 
-  app.refreshUserUi = updateUserElements;
+  app.fetchExpenses = (params = {}) =>
+    request(`/expenses${buildQuery(params)}`);
+
+  app.createExpense = (payload) =>
+    request("/expenses", {
+      method: "POST",
+      body: payload,
+    });
+
+  app.updateExpense = (expenseId, payload) =>
+    request(`/expenses/${expenseId}`, {
+      method: "PUT",
+      body: payload,
+    });
+
+  app.deleteExpense = (expenseId) =>
+    request(`/expenses/${expenseId}`, {
+      method: "DELETE",
+    });
+
+  app.fetchExpenseAnalytics = () => request("/expenses/analytics");
+
+  app.createBudget = (payload) =>
+    request("/budget", {
+      method: "POST",
+      body: payload,
+    });
+
+  app.fetchBudgets = (params = {}) => request(`/budget${buildQuery(params)}`);
+
+  app.fetchSplitRecords = () => request("/split");
+  app.saveSplitRecord = (payload) =>
+    request("/split", {
+      method: "POST",
+      body: payload,
+    });
+  app.deleteSplitRecord = (splitId) =>
+    request(`/split/${splitId}`, {
+      method: "DELETE",
+    });
+
+  app.fetchSplitParticipants = () => request("/split/participants");
+  app.addSplitParticipant = (payload) =>
+    request("/split/participants", {
+      method: "POST",
+      body: payload,
+    });
+  app.removeSplitParticipant = (participantId) =>
+    request(`/split/participants/${participantId}`, {
+      method: "DELETE",
+    });
+  app.clearSplitParticipants = () =>
+    request("/split/participants", {
+      method: "DELETE",
+    });
 
   function initLandingMenu() {
-    const toggle = document.querySelector("[data-menu-toggle]");
+    const toggleButton = document.querySelector("[data-menu-toggle]");
     const menu = document.querySelector("[data-menu]");
-
-    if (!toggle || !menu) {
+    if (!toggleButton || !menu) {
       return;
     }
 
-    toggle.addEventListener("click", () => {
+    toggleButton.addEventListener("click", () => {
       const isOpen = menu.classList.toggle("open");
-      toggle.setAttribute("aria-expanded", String(isOpen));
+      toggleButton.setAttribute("aria-expanded", String(isOpen));
     });
 
     menu.querySelectorAll("a").forEach((link) => {
@@ -209,16 +366,15 @@
         if (!menu.classList.contains("open")) {
           return;
         }
-
         menu.classList.remove("open");
-        toggle.setAttribute("aria-expanded", "false");
+        toggleButton.setAttribute("aria-expanded", "false");
       });
     });
   }
 
   function initRevealOnScroll() {
-    const nodes = document.querySelectorAll(".reveal");
-    if (!nodes.length) {
+    const revealNodes = document.querySelectorAll(".reveal");
+    if (!revealNodes.length) {
       return;
     }
 
@@ -228,7 +384,6 @@
           if (!entry.isIntersecting) {
             return;
           }
-
           entry.target.classList.add("is-visible");
           observer.unobserve(entry.target);
         });
@@ -236,14 +391,14 @@
       { threshold: 0.16 }
     );
 
-    nodes.forEach((node) => observer.observe(node));
+    revealNodes.forEach((node) => observer.observe(node));
   }
 
   function initPasswordToggles() {
     document.querySelectorAll("[data-toggle-password]").forEach((button) => {
       button.addEventListener("click", () => {
         const targetId = button.getAttribute("data-target");
-        const input = targetId ? document.getElementById(targetId) : null;
+        const input = targetId ? byId(targetId) : null;
         if (!input) {
           return;
         }
@@ -253,6 +408,10 @@
         button.textContent = nextType === "password" ? "Show" : "Hide";
       });
     });
+  }
+
+  function byId(id) {
+    return document.getElementById(id);
   }
 
   function passwordStrength(password) {
@@ -266,135 +425,110 @@
     if (!password) {
       return { label: "Password strength", width: 0, className: "" };
     }
-
     if (score <= 2) {
       return { label: "Weak password", width: 35, className: "strength-weak" };
     }
-
     if (score <= 4) {
       return { label: "Medium password", width: 70, className: "strength-medium" };
     }
-
     return { label: "Strong password", width: 100, className: "strength-strong" };
   }
 
   function initLoginForm() {
-    const form = document.getElementById("loginForm");
+    const form = byId("loginForm");
     if (!form) {
       return;
     }
 
-    const messageNode = document.getElementById("loginMessage");
-
-    form.addEventListener("submit", (event) => {
+    const messageNode = byId("loginMessage");
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       app.clearFormErrors(form);
       app.showFormMessage(messageNode, "", "");
 
       const formData = new FormData(form);
-      const email = String(formData.get("email") || "").trim();
+      const email = String(formData.get("email") || "").trim().toLowerCase();
       const password = String(formData.get("password") || "");
-      const user = app.getUser();
 
       let hasError = false;
-
-      if (!isValidEmail(email)) {
-        app.setFieldError(form, "email", "Enter a valid email address.");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        app.setFieldError(form, "email", "Enter a valid email.");
         hasError = true;
       }
-
       if (password.length < 6) {
         app.setFieldError(form, "password", "Password must be at least 6 characters.");
         hasError = true;
       }
-
-      if (!hasError && user.email && email.toLowerCase() !== String(user.email).toLowerCase()) {
-        app.setFieldError(form, "email", "This email is not registered.");
-        hasError = true;
-      }
-
-      if (!hasError && user.password && password !== user.password) {
-        app.setFieldError(form, "password", "Incorrect password.");
-        hasError = true;
-      }
-
       if (hasError) {
         app.showFormMessage(messageNode, "Please fix the highlighted fields.", "error");
         return;
       }
 
-      if (!user.email) {
-        app.saveUser({
-          name: DEFAULT_SETTINGS.name,
-          email,
-          password,
-        });
+      try {
+        const response = await app.login({ email, password });
+        app.setToken(response.token);
+        profileCache = normalizeProfile(response.user);
+        refreshUserUi();
+        applyTheme();
+        app.showFormMessage(messageNode, "Login successful. Redirecting...", "success");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 400);
+      } catch (error) {
+        app.showFormMessage(messageNode, error.message, "error");
       }
-
-      app.showFormMessage(messageNode, "Login successful. Redirecting...", "success");
-      setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 600);
     });
   }
 
   function initRegisterForm() {
-    const form = document.getElementById("registerForm");
+    const form = byId("registerForm");
     if (!form) {
       return;
     }
 
-    const passwordInput = document.getElementById("registerPassword");
-    const bar = document.getElementById("passwordStrengthBar");
-    const text = document.getElementById("passwordStrengthText");
-    const messageNode = document.getElementById("registerMessage");
+    const passwordInput = byId("registerPassword");
+    const strengthBar = byId("passwordStrengthBar");
+    const strengthText = byId("passwordStrengthText");
+    const messageNode = byId("registerMessage");
 
     function updateStrength() {
-      if (!passwordInput || !bar || !text) {
-        return;
+      const status = passwordStrength(passwordInput?.value || "");
+      if (strengthBar) {
+        strengthBar.style.width = `${status.width}%`;
+        strengthBar.className = status.className;
       }
-
-      const status = passwordStrength(passwordInput.value);
-      bar.style.width = `${status.width}%`;
-      bar.className = status.className;
-      text.textContent = status.label;
+      if (strengthText) {
+        strengthText.textContent = status.label;
+      }
     }
 
     passwordInput?.addEventListener("input", updateStrength);
     updateStrength();
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       app.clearFormErrors(form);
       app.showFormMessage(messageNode, "", "");
 
       const formData = new FormData(form);
       const fullName = String(formData.get("fullName") || "").trim();
-      const email = String(formData.get("email") || "").trim();
+      const email = String(formData.get("email") || "").trim().toLowerCase();
       const password = String(formData.get("password") || "");
       const confirmPassword = String(formData.get("confirmPassword") || "");
 
       let hasError = false;
-
       if (fullName.length < 3) {
         app.setFieldError(form, "fullName", "Name must be at least 3 characters.");
         hasError = true;
       }
-
-      if (!isValidEmail(email)) {
-        app.setFieldError(form, "email", "Enter a valid email address.");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        app.setFieldError(form, "email", "Enter a valid email.");
         hasError = true;
       }
-
-      if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
-        app.setFieldError(
-          form,
-          "password",
-          "Use 8+ chars with uppercase, lowercase, and a number."
-        );
+      if (password.length < 8) {
+        app.setFieldError(form, "password", "Password must be at least 8 characters.");
         hasError = true;
       }
-
       if (confirmPassword !== password) {
         app.setFieldError(form, "confirmPassword", "Passwords do not match.");
         hasError = true;
@@ -405,40 +539,51 @@
         return;
       }
 
-      app.saveUser({
-        name: fullName,
-        email,
-        password,
-      });
-
-      const settings = app.getSettings();
-      settings.name = fullName;
-      settings.email = email;
-      app.saveSettings(settings);
-      updateUserElements();
-
-      app.showFormMessage(messageNode, "Registration successful. Redirecting to login...", "success");
-      setTimeout(() => {
-        window.location.href = "login.html";
-      }, 700);
+      try {
+        const response = await app.register({
+          name: fullName,
+          email,
+          password,
+        });
+        app.setToken(response.token);
+        profileCache = normalizeProfile(response.user);
+        refreshUserUi();
+        applyTheme();
+        app.showFormMessage(messageNode, "Registration successful. Redirecting...", "success");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 500);
+      } catch (error) {
+        app.showFormMessage(messageNode, error.message, "error");
+      }
     });
   }
 
-  function bootDefaults() {
-    const settings = safeParse(localStorage.getItem(KEYS.settings), null);
-    if (!settings) {
-      app.saveSettings(DEFAULT_SETTINGS);
+  async function enforceAuth() {
+    if (isPublicPage()) {
+      return;
+    }
+
+    if (!getToken()) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    try {
+      await app.fetchProfile();
+    } catch (error) {
+      clearToken();
+      window.location.href = "login.html";
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    bootDefaults();
-    app.applyTheme();
-    updateUserElements();
+  document.addEventListener("DOMContentLoaded", async () => {
+    applyTheme();
     initLandingMenu();
     initRevealOnScroll();
     initPasswordToggles();
     initLoginForm();
     initRegisterForm();
+    await enforceAuth();
   });
 })();
