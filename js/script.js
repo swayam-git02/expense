@@ -1,8 +1,9 @@
 (() => {
   const app = (window.ExpenseApp = window.ExpenseApp || {});
 
-  const API_BASE = "http://localhost:5000/api";
+  const API_BASE = "http://localhost:5001/api";
   const TOKEN_KEY = "expenseTracker.token";
+  const THEME_KEY = "expenseTracker.theme.darkMode";
   const DEFAULT_PROFILE = {
     name: "Alex Carter",
     email: "alex@example.com",
@@ -13,7 +14,33 @@
   };
   const PUBLIC_PAGES = new Set(["", "index.html", "login.html", "register.html", "404.html"]);
 
-  let profileCache = null;
+  function readThemePreference() {
+    try {
+      const raw = localStorage.getItem(THEME_KEY);
+      if (raw === "true") {
+        return true;
+      }
+      if (raw === "false") {
+        return false;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function writeThemePreference(enabled) {
+    try {
+      localStorage.setItem(THEME_KEY, String(Boolean(enabled)));
+    } catch (error) {
+      // Ignore localStorage write issues and continue with in-memory state.
+    }
+  }
+
+  let profileCache = {
+    ...DEFAULT_PROFILE,
+    darkMode: readThemePreference() ?? DEFAULT_PROFILE.darkMode,
+  };
 
   function safeParse(value, fallback) {
     if (!value) {
@@ -196,9 +223,14 @@
       ...current,
       darkMode: Boolean(enabled),
     };
+    writeThemePreference(profileCache.darkMode);
     applyTheme();
   };
-  app.getSettings = () => profileCache || { ...DEFAULT_PROFILE };
+  app.getSettings = () =>
+    profileCache || {
+      ...DEFAULT_PROFILE,
+      darkMode: readThemePreference() ?? DEFAULT_PROFILE.darkMode,
+    };
   app.formatCurrency = (amount, currencyCode) => {
     const settings = app.getSettings();
     const currency = currencyCode || settings.currency || "INR";
@@ -271,6 +303,7 @@
   app.fetchProfile = async () => {
     const profile = await request("/user/profile");
     profileCache = normalizeProfile(profile);
+    writeThemePreference(profileCache.darkMode);
     refreshUserUi();
     applyTheme();
     return profileCache;
@@ -282,6 +315,7 @@
       body: payload,
     });
     profileCache = normalizeProfile(profile);
+    writeThemePreference(profileCache.darkMode);
     refreshUserUi();
     applyTheme();
     return profileCache;
@@ -407,6 +441,41 @@
         input.type = nextType;
         button.textContent = nextType === "password" ? "Show" : "Hide";
       });
+    });
+  }
+
+  function initLogoutLinks() {
+    document.querySelectorAll("[data-logout]").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        clearToken();
+        profileCache = null;
+        window.location.href = "index.html";
+      });
+    });
+  }
+
+  function initLandingThemeToggle() {
+    const themeToggle = document.querySelector("[data-theme-toggle]");
+    if (!themeToggle) {
+      return;
+    }
+
+    const labelNode = themeToggle.querySelector("[data-theme-toggle-label]");
+    const syncState = () => {
+      const isDark = Boolean(app.getSettings().darkMode);
+      themeToggle.setAttribute("aria-pressed", String(isDark));
+      themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+      if (labelNode) {
+        labelNode.textContent = isDark ? "Light" : "Dark";
+      }
+    };
+
+    syncState();
+    themeToggle.addEventListener("click", () => {
+      const nextTheme = !Boolean(app.getSettings().darkMode);
+      app.setTheme(nextTheme);
+      syncState();
     });
   }
 
@@ -579,9 +648,11 @@
 
   document.addEventListener("DOMContentLoaded", async () => {
     applyTheme();
+    initLandingThemeToggle();
     initLandingMenu();
     initRevealOnScroll();
     initPasswordToggles();
+    initLogoutLinks();
     initLoginForm();
     initRegisterForm();
     await enforceAuth();

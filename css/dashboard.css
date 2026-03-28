@@ -200,6 +200,16 @@
   margin: 0.45rem 0 0;
   font-size: clamp(1.35rem, 3vw, 1.85rem);
   letter-spacing: -0.03em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.stat-card h3.metric-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.1;
 }
 
 .transaction-list {

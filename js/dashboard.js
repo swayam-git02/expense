@@ -2,6 +2,45 @@
   const app = window.ExpenseApp || {};
   let dashboardCharts = [];
   let reportCharts = [];
+  let dashboardMetricNodes = [];
+  let metricFitFrame = 0;
+  let metricResizeBound = false;
+
+  function fitMetricValue(node) {
+    if (!node) {
+      return;
+    }
+
+    node.classList.remove("metric-wrap");
+    node.style.fontSize = "";
+
+    const minFontSize = 17;
+    let fontSize = parseFloat(window.getComputedStyle(node).fontSize) || 16;
+
+    while (node.scrollWidth > node.clientWidth && fontSize > minFontSize) {
+      fontSize -= 1;
+      node.style.fontSize = `${fontSize}px`;
+    }
+
+    if (node.scrollWidth > node.clientWidth) {
+      node.classList.add("metric-wrap");
+    }
+  }
+
+  function fitDashboardMetrics() {
+    dashboardMetricNodes.forEach((node) => fitMetricValue(node));
+  }
+
+  function scheduleMetricFit() {
+    if (metricFitFrame) {
+      cancelAnimationFrame(metricFitFrame);
+    }
+
+    metricFitFrame = requestAnimationFrame(() => {
+      metricFitFrame = 0;
+      fitDashboardMetrics();
+    });
+  }
 
   function byNewestDate(a, b) {
     return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
@@ -108,6 +147,12 @@
     const expenseNode = document.getElementById("metricExpenses");
     const monthlyNode = document.getElementById("metricMonthly");
     const listNode = document.getElementById("recentTransactionsList");
+    dashboardMetricNodes = [balanceNode, incomeNode, expenseNode, monthlyNode].filter(Boolean);
+
+    if (!metricResizeBound) {
+      window.addEventListener("resize", scheduleMetricFit);
+      metricResizeBound = true;
+    }
 
     try {
       const [expenses, analytics] = await Promise.all([
@@ -134,6 +179,7 @@
       incomeNode.textContent = app.formatCurrency(analytics.totalIncome || 0, currency);
       expenseNode.textContent = app.formatCurrency(analytics.totalExpense || 0, currency);
       monthlyNode.textContent = app.formatCurrency(monthlySpending, currency);
+      scheduleMetricFit();
 
       if (listNode) {
         const recent = [...expenses].sort(byNewestDate).slice(0, 6);
@@ -449,12 +495,39 @@
     const avatarField = formControl(profileForm, "avatar");
     const currencyField = formControl(profileForm, "currency");
     const monthlyIncomeField = formControl(profileForm, "monthlyIncome");
+    let themeSaveRequestId = 0;
 
     function updateAvatarPreview(name, url) {
       if (!avatarPreview) {
         return;
       }
       avatarPreview.src = url || fallbackAvatar(name);
+    }
+
+    function buildThemeUpdatePayload(enabled) {
+      const settings = app.getSettings?.() || {};
+      const name = String(settings.name || nameField?.value || "").trim();
+      const email = String(settings.email || emailField?.value || "")
+        .trim()
+        .toLowerCase();
+      const avatar = String(settings.avatar || avatarField?.value || "").trim();
+      const currency = String(settings.currency || currencyField?.value || "INR")
+        .trim()
+        .toUpperCase();
+      const monthlyIncome = Number(settings.monthlyIncome ?? monthlyIncomeField?.value ?? 0);
+
+      return {
+        name,
+        email,
+        avatar,
+        currency: currency || "INR",
+        darkMode: Boolean(enabled),
+        monthlyIncome: Number.isFinite(monthlyIncome) ? monthlyIncome : 0,
+      };
+    }
+
+    if (darkModeToggle) {
+      darkModeToggle.checked = Boolean(app.getSettings?.().darkMode);
     }
 
     try {
@@ -474,8 +547,41 @@
       updateAvatarPreview(nameField?.value, avatarInput.value.trim());
     });
 
-    darkModeToggle?.addEventListener("change", () => {
-      app.setTheme?.(darkModeToggle.checked);
+    darkModeToggle?.addEventListener("change", async () => {
+      const nextDarkMode = Boolean(darkModeToggle.checked);
+      const previousDarkMode = Boolean(app.getSettings?.().darkMode);
+      app.setTheme?.(nextDarkMode);
+
+      const payload = buildThemeUpdatePayload(nextDarkMode);
+      if (!payload.name || !payload.email) {
+        if (darkModeToggle) {
+          darkModeToggle.checked = previousDarkMode;
+        }
+        app.setTheme?.(previousDarkMode);
+        app.showFormMessage?.(profileMessage, "Please save your profile details first.", "error");
+        return;
+      }
+
+      const requestId = (themeSaveRequestId += 1);
+      try {
+        await app.updateProfile?.(payload);
+        if (requestId !== themeSaveRequestId) {
+          return;
+        }
+        if (darkModeToggle) {
+          darkModeToggle.checked = Boolean(app.getSettings?.().darkMode);
+        }
+        app.showFormMessage?.(profileMessage, "Theme preference saved.", "success");
+      } catch (error) {
+        if (requestId !== themeSaveRequestId) {
+          return;
+        }
+        if (darkModeToggle) {
+          darkModeToggle.checked = previousDarkMode;
+        }
+        app.setTheme?.(previousDarkMode);
+        app.showFormMessage?.(profileMessage, error.message, "error");
+      }
     });
 
     profileForm.addEventListener("submit", async (event) => {

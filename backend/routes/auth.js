@@ -20,15 +20,23 @@ function signToken(user) {
   );
 }
 
+function normalizeEmail(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 router.post("/register", async (req, res, next) => {
   try {
     const name = String(req.body.name || "").trim();
-    const email = String(req.body.email || "")
-      .trim()
-      .toLowerCase();
+    const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
 
-    if (name.length < 2 || !email || password.length < 6) {
+    if (name.length < 2 || !isValidEmail(email) || password.length < 6) {
       res.status(400).json({
         success: false,
         message: "Invalid registration data",
@@ -81,9 +89,7 @@ router.post("/register", async (req, res, next) => {
 
 router.post("/login", async (req, res, next) => {
   try {
-    const email = String(req.body.email || "")
-      .trim()
-      .toLowerCase();
+    const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
 
     if (!email || !password) {
