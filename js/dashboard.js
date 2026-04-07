@@ -461,16 +461,21 @@
     });
   }
 
-  function fallbackAvatar(name) {
-    const initials = String(name || "ET")
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0].toUpperCase())
-      .join("");
+  function normalizeAvatarUrl(value) {
+    return String(value || "").trim();
+  }
 
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='88' height='88'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop offset='0%' stop-color='#2f6bff'/><stop offset='100%' stop-color='#11b981'/></linearGradient></defs><rect width='88' height='88' rx='44' fill='url(#g)'/><text x='50%' y='56%' text-anchor='middle' font-family='Arial, sans-serif' font-size='30' fill='white'>${initials || "ET"}</text></svg>`;
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  function isValidAvatarUrl(avatarUrl) {
+    if (!avatarUrl) {
+      return true;
+    }
+
+    try {
+      const parsed = new URL(avatarUrl);
+      return ["http:", "https:", "data:"].includes(parsed.protocol);
+    } catch (error) {
+      return false;
+    }
   }
 
   function formControl(form, name) {
@@ -497,24 +502,25 @@
     const monthlyIncomeField = formControl(profileForm, "monthlyIncome");
     let themeSaveRequestId = 0;
 
-    function updateAvatarPreview(name, url) {
+    function updateAvatarPreview(name, url, options = {}) {
       if (!avatarPreview) {
         return;
       }
-      avatarPreview.src = url || fallbackAvatar(name);
+
+      app.applyAvatarImage?.(avatarPreview, name, url, options);
     }
 
     function buildThemeUpdatePayload(enabled) {
       const settings = app.getSettings?.() || {};
-      const name = String(settings.name || nameField?.value || "").trim();
-      const email = String(settings.email || emailField?.value || "")
+      const name = String(nameField?.value || settings.name || "").trim();
+      const email = String(emailField?.value || settings.email || "")
         .trim()
         .toLowerCase();
-      const avatar = String(settings.avatar || avatarField?.value || "").trim();
-      const currency = String(settings.currency || currencyField?.value || "INR")
+      const avatar = normalizeAvatarUrl(avatarField?.value || settings.avatar || "");
+      const currency = String(currencyField?.value || settings.currency || "INR")
         .trim()
         .toUpperCase();
-      const monthlyIncome = Number(settings.monthlyIncome ?? monthlyIncomeField?.value ?? 0);
+      const monthlyIncome = Number(monthlyIncomeField?.value ?? settings.monthlyIncome ?? 0);
 
       return {
         name,
@@ -544,7 +550,22 @@
     }
 
     avatarInput?.addEventListener("input", () => {
-      updateAvatarPreview(nameField?.value, avatarInput.value.trim());
+      app.setFieldError?.(profileForm, "avatar", "");
+      updateAvatarPreview(nameField?.value, normalizeAvatarUrl(avatarInput.value), {
+        onError: () => {
+          if (normalizeAvatarUrl(avatarInput.value)) {
+            app.showFormMessage?.(profileMessage, "Avatar URL could not be loaded. Showing initials instead.", "error");
+          }
+        },
+      });
+    });
+
+    nameField?.addEventListener("input", () => {
+      if (normalizeAvatarUrl(avatarInput?.value)) {
+        return;
+      }
+
+      updateAvatarPreview(nameField?.value, "");
     });
 
     darkModeToggle?.addEventListener("change", async () => {
@@ -591,7 +612,7 @@
 
       const name = String(nameField?.value || "").trim();
       const email = String(emailField?.value || "").trim().toLowerCase();
-      const avatar = String(avatarField?.value || "").trim();
+      const avatar = normalizeAvatarUrl(avatarField?.value);
       const currency = String(currencyField?.value || "INR").toUpperCase();
       const monthlyIncome = Number(monthlyIncomeField?.value || 0);
 
@@ -608,6 +629,10 @@
         app.setFieldError?.(profileForm, "monthlyIncome", "Monthly income must be 0 or more.");
         hasError = true;
       }
+      if (!isValidAvatarUrl(avatar)) {
+        app.setFieldError?.(profileForm, "avatar", "Enter a direct image URL starting with http:// or https://.");
+        hasError = true;
+      }
 
       if (hasError) {
         app.showFormMessage?.(profileMessage, "Please fix the profile form errors.", "error");
@@ -615,7 +640,7 @@
       }
 
       try {
-        await app.updateProfile?.({
+        const updatedProfile = await app.updateProfile?.({
           name,
           email,
           avatar,
@@ -623,7 +648,11 @@
           darkMode: Boolean(darkModeToggle?.checked),
           monthlyIncome,
         });
-        updateAvatarPreview(name, avatar);
+        updateAvatarPreview(updatedProfile?.name || name, updatedProfile?.avatar || avatar, {
+          onError: () => {
+            app.showFormMessage?.(profileMessage, "Avatar URL was saved, but the image could not be loaded. Showing initials instead.", "error");
+          },
+        });
         app.showFormMessage?.(profileMessage, "Profile updated successfully.", "success");
       } catch (error) {
         app.showFormMessage?.(profileMessage, error.message, "error");

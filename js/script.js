@@ -113,6 +113,29 @@
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   }
 
+  function applyAvatarImage(node, name, avatarUrl, options = {}) {
+    if (!node) {
+      return;
+    }
+
+    const fallback = avatarDataUri(name);
+    const candidate = String(avatarUrl || "").trim();
+    const onError = typeof options.onError === "function" ? options.onError : null;
+
+    if (!candidate) {
+      node.onerror = null;
+      node.src = fallback;
+      return;
+    }
+
+    node.onerror = () => {
+      node.onerror = null;
+      node.src = fallback;
+      onError?.();
+    };
+    node.src = candidate;
+  }
+
   function getToken() {
     return localStorage.getItem(TOKEN_KEY) || "";
   }
@@ -195,7 +218,6 @@
     const settings = app.getSettings();
     const name = settings.name || DEFAULT_PROFILE.name;
     const currency = settings.currency || "INR";
-    const avatar = settings.avatar || avatarDataUri(name);
 
     document.querySelectorAll("[data-user-name]").forEach((node) => {
       node.textContent = name;
@@ -206,7 +228,7 @@
     });
 
     document.querySelectorAll("[data-user-avatar]").forEach((node) => {
-      node.src = avatar;
+      applyAvatarImage(node, name, settings.avatar);
     });
   }
 
@@ -217,6 +239,8 @@
   app.generateId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   app.applyTheme = applyTheme;
   app.refreshUserUi = refreshUserUi;
+  app.applyAvatarImage = applyAvatarImage;
+  app.createFallbackAvatar = avatarDataUri;
   app.setTheme = (enabled) => {
     const current = app.getSettings();
     profileCache = {
