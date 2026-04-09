@@ -2,10 +2,27 @@ const express = require("express");
 
 const authMiddleware = require("../middleware/auth");
 const { all, get, run } = require("../config/db");
+const { getBudgetAlerts } = require("../utils/budgetAlerts");
 
 const router = express.Router();
 
 router.use(authMiddleware);
+
+router.get("/alerts", async (req, res, next) => {
+  try {
+    const data = await getBudgetAlerts({
+      userId: req.user.id,
+      month: req.query.month,
+    });
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.post("/", async (req, res, next) => {
   try {

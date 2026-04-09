@@ -101,6 +101,77 @@
     return [];
   }
 
+  function alertCountLabel(count) {
+    return count ? `${count} active alert${count === 1 ? "" : "s"}` : "No active alerts";
+  }
+
+  function alertSeverityLabel(severity) {
+    return severity === "danger" ? "Over budget" : "Near limit";
+  }
+
+  function renderDashboardAlerts(listNode, countNode, alertsData, currency) {
+    if (!listNode) {
+      return;
+    }
+
+    const alerts = Array.isArray(alertsData?.alerts) ? alertsData.alerts : [];
+    listNode.innerHTML = "";
+
+    if (countNode) {
+      countNode.textContent = alertCountLabel(Number(alertsData?.alertCount || 0));
+    }
+
+    if (!alerts.length) {
+      listNode.innerHTML = '<div class="empty-state">No budget alerts right now. Your tracked categories are within a safe range.</div>';
+      return;
+    }
+
+    alerts.slice(0, 3).forEach((alert) => {
+      const card = document.createElement("article");
+      card.className = `budget-alert-card ${alert.severity || "warning"}`;
+
+      const head = document.createElement("div");
+      head.className = "budget-alert-head";
+
+      const copy = document.createElement("div");
+      const title = document.createElement("h3");
+      title.textContent = `${alert.category} needs attention`;
+      const body = document.createElement("p");
+      body.textContent = app.describeBudgetAlert?.(alert, currency) || "";
+      copy.append(title, body);
+
+      const status = document.createElement("span");
+      status.className = `budget-status ${alert.severity || "warning"}`;
+      status.textContent = alertSeverityLabel(alert.severity);
+      head.append(copy, status);
+
+      const progressRow = document.createElement("div");
+      progressRow.className = "budget-alert-progress-row";
+
+      const progressTrack = document.createElement("div");
+      progressTrack.className = "budget-progress";
+
+      const progressBar = document.createElement("span");
+      progressBar.className = `budget-progress-bar ${alert.severity || "warning"}`;
+      progressBar.style.width = `${Math.min(Math.max(Number(alert.progress || 0), 0), 100)}%`;
+      progressTrack.appendChild(progressBar);
+
+      const progressValue = document.createElement("strong");
+      progressValue.textContent = `${Math.round(Number(alert.progress || 0))}% used`;
+      progressRow.append(progressTrack, progressValue);
+
+      card.append(head, progressRow);
+      listNode.appendChild(card);
+    });
+
+    if (alerts.length > 3) {
+      const note = document.createElement("div");
+      note.className = "empty-state";
+      note.textContent = `${alerts.length - 3} more alert${alerts.length - 3 === 1 ? "" : "s"} available in Budget Planner.`;
+      listNode.appendChild(note);
+    }
+  }
+
   function initSidebar() {
     const sidebar = document.getElementById("appSidebar");
     const menuButton = document.getElementById("mobileSidebarToggle");
@@ -147,6 +218,8 @@
     const expenseNode = document.getElementById("metricExpenses");
     const monthlyNode = document.getElementById("metricMonthly");
     const listNode = document.getElementById("recentTransactionsList");
+    const alertListNode = document.getElementById("dashboardBudgetAlerts");
+    const alertCountNode = document.getElementById("dashboardBudgetAlertCount");
     dashboardMetricNodes = [balanceNode, incomeNode, expenseNode, monthlyNode].filter(Boolean);
 
     if (!metricResizeBound) {
@@ -199,6 +272,20 @@
             `;
             listNode.appendChild(row);
           });
+        }
+      }
+
+      try {
+        const alertsData = await app.fetchBudgetAlerts?.({
+          month: app.currentMonthValue?.(),
+        });
+        renderDashboardAlerts(alertListNode, alertCountNode, alertsData, currency);
+      } catch (error) {
+        if (alertCountNode) {
+          alertCountNode.textContent = "Alerts unavailable";
+        }
+        if (alertListNode) {
+          alertListNode.innerHTML = `<div class="empty-state">${error.message}</div>`;
         }
       }
 
@@ -264,9 +351,16 @@
           })
         );
       }
+
     } catch (error) {
       if (listNode) {
         listNode.innerHTML = `<li class="empty-state">${error.message}</li>`;
+      }
+      if (alertCountNode) {
+        alertCountNode.textContent = "Alerts unavailable";
+      }
+      if (alertListNode) {
+        alertListNode.innerHTML = `<div class="empty-state">${error.message}</div>`;
       }
     }
   }
@@ -461,21 +555,8 @@
     });
   }
 
-  function normalizeAvatarUrl(value) {
+  function normalizeAvatarValue(value) {
     return String(value || "").trim();
-  }
-
-  function isValidAvatarUrl(avatarUrl) {
-    if (!avatarUrl) {
-      return true;
-    }
-
-    try {
-      const parsed = new URL(avatarUrl);
-      return ["http:", "https:", "data:"].includes(parsed.protocol);
-    } catch (error) {
-      return false;
-    }
   }
 
   function formControl(form, name) {
@@ -492,15 +573,21 @@
     const profileMessage = document.getElementById("profileMessage");
     const passwordMessage = document.getElementById("passwordMessage");
     const avatarPreview = document.getElementById("avatarPreview");
+    const avatarPicker = document.getElementById("avatarPicker");
+    const avatarHint = document.getElementById("avatarPickerHint");
     const darkModeToggle = document.getElementById("darkModeToggle");
-    const avatarInput = document.getElementById("avatarUrl");
 
     const nameField = formControl(profileForm, "name");
     const emailField = formControl(profileForm, "email");
     const avatarField = formControl(profileForm, "avatar");
     const currencyField = formControl(profileForm, "currency");
     const monthlyIncomeField = formControl(profileForm, "monthlyIncome");
+    const avatarPresets = app.getAvatarPresets?.() || [];
     let themeSaveRequestId = 0;
+
+    function selectedAvatarValue() {
+      return normalizeAvatarValue(avatarField?.value || "");
+    }
 
     function updateAvatarPreview(name, url, options = {}) {
       if (!avatarPreview) {
@@ -510,13 +597,75 @@
       app.applyAvatarImage?.(avatarPreview, name, url, options);
     }
 
+    function updateAvatarHint(avatarValue) {
+      if (!avatarHint) {
+        return;
+      }
+
+      if (!avatarValue) {
+        avatarHint.textContent = "Using initials avatar. Pick any preset if you want a different look.";
+        return;
+      }
+
+      const matchingPreset = avatarPresets.find((preset) => preset.id === avatarValue);
+      if (matchingPreset) {
+        avatarHint.textContent = `${matchingPreset.label} selected. Save your profile to keep this avatar.`;
+        return;
+      }
+
+      avatarHint.textContent = "A previously saved custom avatar is still active. Pick a preset to replace it.";
+    }
+
+    function renderAvatarPicker() {
+      if (!avatarPicker) {
+        return;
+      }
+
+      const name = String(nameField?.value || "").trim();
+      const selectedAvatar = selectedAvatarValue();
+      const choices = [{ id: "", label: "Initials" }, ...avatarPresets];
+
+      avatarPicker.innerHTML = "";
+      choices.forEach((choice) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "avatar-option";
+        button.setAttribute("data-avatar-choice", choice.id);
+
+        const isSelected = choice.id === selectedAvatar;
+        button.classList.toggle("selected", isSelected);
+        button.setAttribute("aria-pressed", String(isSelected));
+
+        const image = document.createElement("img");
+        image.alt = `${choice.label} avatar`;
+        app.applyAvatarImage?.(image, name, choice.id);
+
+        const label = document.createElement("span");
+        label.textContent = choice.label;
+
+        button.append(image, label);
+        button.addEventListener("click", () => {
+          if (avatarField) {
+            avatarField.value = choice.id;
+          }
+          app.setFieldError?.(profileForm, "avatar", "");
+          updateAvatarPreview(nameField?.value, choice.id);
+          renderAvatarPicker();
+        });
+
+        avatarPicker.appendChild(button);
+      });
+
+      updateAvatarHint(selectedAvatar);
+    }
+
     function buildThemeUpdatePayload(enabled) {
       const settings = app.getSettings?.() || {};
       const name = String(nameField?.value || settings.name || "").trim();
       const email = String(emailField?.value || settings.email || "")
         .trim()
         .toLowerCase();
-      const avatar = normalizeAvatarUrl(avatarField?.value || settings.avatar || "");
+      const avatar = normalizeAvatarValue(avatarField?.value || settings.avatar || "");
       const currency = String(currencyField?.value || settings.currency || "INR")
         .trim()
         .toUpperCase();
@@ -536,6 +685,9 @@
       darkModeToggle.checked = Boolean(app.getSettings?.().darkMode);
     }
 
+    renderAvatarPicker();
+    updateAvatarPreview(nameField?.value, selectedAvatarValue());
+
     try {
       const profile = await app.fetchProfile?.();
       if (nameField) nameField.value = profile.name || "";
@@ -544,28 +696,25 @@
       if (currencyField) currencyField.value = profile.currency || "INR";
       if (monthlyIncomeField) monthlyIncomeField.value = String(Number(profile.monthlyIncome || 0));
       if (darkModeToggle) darkModeToggle.checked = Boolean(profile.darkMode);
-      updateAvatarPreview(profile.name, profile.avatar);
+      renderAvatarPicker();
+      updateAvatarPreview(profile.name, profile.avatar, {
+        onError: () => {
+          if (selectedAvatarValue()) {
+            app.showFormMessage?.(
+              profileMessage,
+              "The saved avatar could not be loaded. Pick a preset avatar and save again.",
+              "error"
+            );
+          }
+        },
+      });
     } catch (error) {
       app.showFormMessage?.(profileMessage, error.message, "error");
     }
 
-    avatarInput?.addEventListener("input", () => {
-      app.setFieldError?.(profileForm, "avatar", "");
-      updateAvatarPreview(nameField?.value, normalizeAvatarUrl(avatarInput.value), {
-        onError: () => {
-          if (normalizeAvatarUrl(avatarInput.value)) {
-            app.showFormMessage?.(profileMessage, "Avatar URL could not be loaded. Showing initials instead.", "error");
-          }
-        },
-      });
-    });
-
     nameField?.addEventListener("input", () => {
-      if (normalizeAvatarUrl(avatarInput?.value)) {
-        return;
-      }
-
-      updateAvatarPreview(nameField?.value, "");
+      renderAvatarPicker();
+      updateAvatarPreview(nameField?.value, selectedAvatarValue());
     });
 
     darkModeToggle?.addEventListener("change", async () => {
@@ -612,7 +761,7 @@
 
       const name = String(nameField?.value || "").trim();
       const email = String(emailField?.value || "").trim().toLowerCase();
-      const avatar = normalizeAvatarUrl(avatarField?.value);
+      const avatar = normalizeAvatarValue(avatarField?.value);
       const currency = String(currencyField?.value || "INR").toUpperCase();
       const monthlyIncome = Number(monthlyIncomeField?.value || 0);
 
@@ -627,10 +776,6 @@
       }
       if (!Number.isFinite(monthlyIncome) || monthlyIncome < 0) {
         app.setFieldError?.(profileForm, "monthlyIncome", "Monthly income must be 0 or more.");
-        hasError = true;
-      }
-      if (!isValidAvatarUrl(avatar)) {
-        app.setFieldError?.(profileForm, "avatar", "Enter a direct image URL starting with http:// or https://.");
         hasError = true;
       }
 
@@ -648,11 +793,11 @@
           darkMode: Boolean(darkModeToggle?.checked),
           monthlyIncome,
         });
-        updateAvatarPreview(updatedProfile?.name || name, updatedProfile?.avatar || avatar, {
-          onError: () => {
-            app.showFormMessage?.(profileMessage, "Avatar URL was saved, but the image could not be loaded. Showing initials instead.", "error");
-          },
-        });
+        if (avatarField) {
+          avatarField.value = updatedProfile?.avatar || avatar;
+        }
+        renderAvatarPicker();
+        updateAvatarPreview(updatedProfile?.name || name, updatedProfile?.avatar || avatar);
         app.showFormMessage?.(profileMessage, "Profile updated successfully.", "success");
       } catch (error) {
         app.showFormMessage?.(profileMessage, error.message, "error");

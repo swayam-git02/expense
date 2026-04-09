@@ -13,6 +13,70 @@
     monthlyIncome: 5000,
   };
   const PUBLIC_PAGES = new Set(["", "index.html", "login.html", "register.html", "404.html"]);
+  const AVATAR_PRESETS = [
+    {
+      id: "preset:aurora",
+      label: "Aurora",
+      start: "#2f6bff",
+      end: "#11b981",
+      skin: "#ffd7ba",
+      shirt: "#153f6f",
+      accent: "#fef08a",
+      accentStyle: "spark",
+    },
+    {
+      id: "preset:sunrise",
+      label: "Sunrise",
+      start: "#f97316",
+      end: "#ec4899",
+      skin: "#ffe1c8",
+      shirt: "#6b2148",
+      accent: "#fde68a",
+      accentStyle: "dot",
+    },
+    {
+      id: "preset:lagoon",
+      label: "Lagoon",
+      start: "#0f766e",
+      end: "#38bdf8",
+      skin: "#f5d0b2",
+      shirt: "#134e4a",
+      accent: "#a7f3d0",
+      accentStyle: "leaf",
+    },
+    {
+      id: "preset:ember",
+      label: "Ember",
+      start: "#ef4444",
+      end: "#f59e0b",
+      skin: "#ffd9bf",
+      shirt: "#7c2d12",
+      accent: "#fde68a",
+      accentStyle: "spark",
+    },
+    {
+      id: "preset:midnight",
+      label: "Midnight",
+      start: "#111827",
+      end: "#3b82f6",
+      skin: "#f4d3ba",
+      shirt: "#1d4ed8",
+      accent: "#bfdbfe",
+      accentStyle: "dot",
+    },
+    {
+      id: "preset:meadow",
+      label: "Meadow",
+      start: "#22c55e",
+      end: "#84cc16",
+      skin: "#ffd8b5",
+      shirt: "#166534",
+      accent: "#dcfce7",
+      accentStyle: "leaf",
+    },
+  ];
+  const AVATAR_PRESET_MAP = new Map(AVATAR_PRESETS.map((preset) => [preset.id, preset]));
+  const avatarPresetCache = new Map();
 
   function readThemePreference() {
     try {
@@ -77,6 +141,63 @@
     return queryString ? `?${queryString}` : "";
   }
 
+  function currentMonthValue(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}`;
+  }
+
+  function svgDataUri(svg) {
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  }
+
+  function avatarAccentMarkup(preset) {
+    if (preset.accentStyle === "leaf") {
+      return `<path d="M46 17c4.8 0 7.8 3.7 7.8 8.2 0 5.1-3.9 8.6-9.6 9.2-.2-5.7 3.5-11.1 9.7-17.4 1 0 1.6.8 1.6 1.8 0 3.4-2.3 6.3-5.7 7.2 2.1.1 3.8.8 5.1 2.1-1.8-7.2-5-11.1-8.9-11.1z" fill="${preset.accent}" opacity="0.92"/>`;
+    }
+
+    if (preset.accentStyle === "dot") {
+      return `<circle cx="48" cy="18" r="5.5" fill="${preset.accent}" opacity="0.92"/><circle cx="19" cy="48" r="3.4" fill="rgba(255,255,255,0.32)"/>`;
+    }
+
+    return `<path d="M47 13l1.7 4.9 5.1.1-4.1 3 1.5 4.8-4.2-3-4.2 3 1.5-4.8-4.1-3 5.1-.1z" fill="${preset.accent}" opacity="0.95"/>`;
+  }
+
+  function avatarPresetDataUri(presetId) {
+    if (avatarPresetCache.has(presetId)) {
+      return avatarPresetCache.get(presetId);
+    }
+
+    const preset = AVATAR_PRESET_MAP.get(presetId);
+    if (!preset) {
+      return "";
+    }
+
+    const gradientId = `bg-${preset.id.replace(/[^a-z0-9_-]/gi, "-")}`;
+
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+        <defs>
+          <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${preset.start}" />
+            <stop offset="100%" stop-color="${preset.end}" />
+          </linearGradient>
+        </defs>
+        <rect width="96" height="96" rx="48" fill="url(#${gradientId})" />
+        <circle cx="28" cy="22" r="14" fill="rgba(255,255,255,0.12)" />
+        ${avatarAccentMarkup(preset)}
+        <path d="M19 80c3.8-13.6 15.1-21 29-21s25.2 7.4 29 21" fill="${preset.shirt}" />
+        <circle cx="48" cy="39" r="17.5" fill="${preset.skin}" />
+        <path d="M37.5 36.2c1.8 0 3.3 1.5 3.3 3.3s-1.5 3.3-3.3 3.3-3.3-1.5-3.3-3.3 1.5-3.3 3.3-3.3zm21 0c1.8 0 3.3 1.5 3.3 3.3s-1.5 3.3-3.3 3.3-3.3-1.5-3.3-3.3 1.5-3.3 3.3-3.3z" fill="#1f2937" />
+        <path d="M40 47.8c2.1 2.4 4.9 3.6 8 3.6s5.9-1.2 8-3.6" fill="none" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round" />
+      </svg>
+    `;
+
+    const dataUri = svgDataUri(svg);
+    avatarPresetCache.set(presetId, dataUri);
+    return dataUri;
+  }
+
   function normalizeProfile(rawProfile) {
     if (!rawProfile) {
       return { ...DEFAULT_PROFILE };
@@ -110,7 +231,33 @@
   function avatarDataUri(name) {
     const initials = initialsFromName(name);
     const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><defs><linearGradient id='grad' x1='0' x2='1' y1='0' y2='1'><stop offset='0%' stop-color='#2f6bff'/><stop offset='100%' stop-color='#11b981'/></linearGradient></defs><rect width='64' height='64' rx='32' fill='url(#grad)'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, sans-serif' font-size='24' fill='white'>${initials}</text></svg>`;
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    return svgDataUri(svg);
+  }
+
+  function isAvatarPreset(value) {
+    return AVATAR_PRESET_MAP.has(String(value || "").trim());
+  }
+
+  function resolveAvatarSource(name, avatarValue) {
+    const candidate = String(avatarValue || "").trim();
+    if (!candidate) {
+      return {
+        src: avatarDataUri(name),
+        isExternal: false,
+      };
+    }
+
+    if (isAvatarPreset(candidate)) {
+      return {
+        src: avatarPresetDataUri(candidate),
+        isExternal: false,
+      };
+    }
+
+    return {
+      src: candidate,
+      isExternal: true,
+    };
   }
 
   function applyAvatarImage(node, name, avatarUrl, options = {}) {
@@ -119,12 +266,12 @@
     }
 
     const fallback = avatarDataUri(name);
-    const candidate = String(avatarUrl || "").trim();
+    const resolved = resolveAvatarSource(name, avatarUrl);
     const onError = typeof options.onError === "function" ? options.onError : null;
 
-    if (!candidate) {
+    if (!resolved.isExternal) {
       node.onerror = null;
-      node.src = fallback;
+      node.src = resolved.src;
       return;
     }
 
@@ -133,7 +280,7 @@
       node.src = fallback;
       onError?.();
     };
-    node.src = candidate;
+    node.src = resolved.src;
   }
 
   function getToken() {
@@ -241,6 +388,9 @@
   app.refreshUserUi = refreshUserUi;
   app.applyAvatarImage = applyAvatarImage;
   app.createFallbackAvatar = avatarDataUri;
+  app.currentMonthValue = currentMonthValue;
+  app.getAvatarPresets = () => AVATAR_PRESETS.map(({ id, label }) => ({ id, label }));
+  app.isAvatarPreset = isAvatarPreset;
   app.setTheme = (enabled) => {
     const current = app.getSettings();
     profileCache = {
@@ -269,6 +419,18 @@
     } catch (error) {
       return `${currency} ${numeric.toFixed(2)}`;
     }
+  };
+  app.describeBudgetAlert = (alert, currencyCode) => {
+    const spent = app.formatCurrency(alert?.spent || 0, currencyCode);
+    const limit = app.formatCurrency(alert?.limit || 0, currencyCode);
+    const difference = app.formatCurrency(Math.abs(alert?.remaining || 0), currencyCode);
+    const progress = Math.round(Number(alert?.progress || 0));
+
+    if (alert?.severity === "danger") {
+      return `${alert?.category || "This category"} is over budget by ${difference}. Spent ${spent} of ${limit}.`;
+    }
+
+    return `${alert?.category || "This category"} has used ${progress}% of its budget. ${difference} remaining from ${limit}.`;
   };
 
   app.showFormMessage = (node, message, type) => {
@@ -380,6 +542,7 @@
     });
 
   app.fetchBudgets = (params = {}) => request(`/budget${buildQuery(params)}`);
+  app.fetchBudgetAlerts = (params = {}) => request(`/budget/alerts${buildQuery(params)}`);
 
   app.fetchSplitRecords = () => request("/split");
   app.saveSplitRecord = (payload) =>

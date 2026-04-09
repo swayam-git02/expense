@@ -101,6 +101,43 @@
     return !hasError;
   }
 
+  function emptyAlertsData() {
+    return {
+      alertCount: 0,
+      warningCount: 0,
+      dangerCount: 0,
+      alerts: [],
+    };
+  }
+
+  function alertCountLabel(count) {
+    return count ? `${count} active alert${count === 1 ? "" : "s"}` : "No active alerts";
+  }
+
+  function alertSeverityLabel(severity) {
+    return severity === "danger" ? "Over budget" : "Near limit";
+  }
+
+  function alertSummaryText(alertsData, monthValue) {
+    const alertCount = Number(alertsData?.alertCount || 0);
+    const warningCount = Number(alertsData?.warningCount || 0);
+    const dangerCount = Number(alertsData?.dangerCount || 0);
+
+    if (!alertCount) {
+      return `No categories are close to their limit for ${monthLabel(monthValue)}.`;
+    }
+
+    const parts = [];
+    if (dangerCount) {
+      parts.push(`${dangerCount} over budget`);
+    }
+    if (warningCount) {
+      parts.push(`${warningCount} near limit`);
+    }
+
+    return `${parts.join(" and ")} in ${monthLabel(monthValue)}. Review these categories before spending more.`;
+  }
+
   function renderBudgetCard(listNode, row, currency) {
     const card = document.createElement("article");
     card.className = "budget-card";
@@ -187,6 +224,63 @@
     container.appendChild(card);
   }
 
+  function renderBudgetAlertCard(listNode, alert, currency) {
+    const card = document.createElement("article");
+    card.className = `budget-alert-card ${alert.severity || "warning"}`;
+
+    const head = document.createElement("div");
+    head.className = "budget-alert-head";
+
+    const copy = document.createElement("div");
+    const title = document.createElement("h3");
+    title.textContent = `${alert.category} needs attention`;
+    const body = document.createElement("p");
+    body.textContent = app.describeBudgetAlert?.(alert, currency) || "";
+    copy.append(title, body);
+
+    const status = document.createElement("span");
+    status.className = `budget-status ${alert.severity || "warning"}`;
+    status.textContent = alertSeverityLabel(alert.severity);
+    head.append(copy, status);
+
+    const progressRow = document.createElement("div");
+    progressRow.className = "budget-alert-progress-row";
+
+    const progressTrack = document.createElement("div");
+    progressTrack.className = "budget-progress";
+
+    const progressBar = document.createElement("span");
+    progressBar.className = `budget-progress-bar ${alert.severity || "warning"}`;
+    progressBar.style.width = `${Math.min(Math.max(Number(alert.progress || 0), 0), 100)}%`;
+    progressTrack.appendChild(progressBar);
+
+    const progressValue = document.createElement("strong");
+    progressValue.textContent = `${Math.round(Number(alert.progress || 0))}% used`;
+    progressRow.append(progressTrack, progressValue);
+
+    const tags = document.createElement("div");
+    tags.className = "budget-tag-list";
+
+    const spentTag = document.createElement("span");
+    spentTag.className = "budget-tag";
+    spentTag.textContent = `Spent ${app.formatCurrency?.(alert.spent, currency)}`;
+
+    const limitTag = document.createElement("span");
+    limitTag.className = "budget-tag";
+    limitTag.textContent = `Limit ${app.formatCurrency?.(alert.limit, currency)}`;
+
+    const remainingTag = document.createElement("span");
+    remainingTag.className = "budget-tag";
+    remainingTag.textContent =
+      alert.severity === "danger"
+        ? `Over by ${app.formatCurrency?.(Math.abs(alert.remaining || 0), currency)}`
+        : `Remaining ${app.formatCurrency?.(Math.abs(alert.remaining || 0), currency)}`;
+
+    tags.append(spentTag, limitTag, remainingTag);
+    card.append(head, progressRow, tags);
+    listNode.appendChild(card);
+  }
+
   async function initBudgetPage() {
     const form = byId("budgetForm");
     if (!form) {
@@ -199,6 +293,9 @@
     const listNode = byId("budgetList");
     const insightsNode = byId("budgetInsights");
     const countChip = byId("budgetCountChip");
+    const alertCountChip = byId("budgetAlertCountChip");
+    const alertSummaryNode = byId("budgetAlertSummaryText");
+    const alertListNode = byId("budgetAlertList");
     const titleNode = byId("budgetOverviewTitle");
     const subtitleNode = byId("budgetOverviewSubtitle");
     const plannedNode = byId("budgetMetricPlanned");
@@ -210,6 +307,7 @@
       activeMonth: defaultMonth,
       budgets: [],
       expenses: [],
+      alertsData: emptyAlertsData(),
     };
 
     if (monthInput && !monthInput.value) {
@@ -247,6 +345,8 @@
       const totalSpent = monthlyExpenses.reduce((sum, expense) => sum + (Number(expense?.amount) || 0), 0);
       const remaining = totalPlanned - totalSpent;
       const overspentCount = budgetRows.filter((row) => row.spent > row.limit).length;
+      const alertsData = state.alertsData || emptyAlertsData();
+      const alerts = Array.isArray(alertsData.alerts) ? alertsData.alerts : [];
 
       if (titleNode) {
         titleNode.textContent = `${monthLabel(state.activeMonth)} Budget Snapshot`;
@@ -274,6 +374,12 @@
       if (countChip) {
         countChip.textContent = `${budgetRows.length} ${budgetRows.length === 1 ? "category" : "categories"}`;
       }
+      if (alertCountChip) {
+        alertCountChip.textContent = alertCountLabel(alertsData.alertCount || 0);
+      }
+      if (alertSummaryNode) {
+        alertSummaryNode.textContent = alertSummaryText(alertsData, state.activeMonth);
+      }
 
       if (listNode) {
         listNode.innerHTML = "";
@@ -284,6 +390,18 @@
           listNode.appendChild(empty);
         } else {
           budgetRows.forEach((row) => renderBudgetCard(listNode, row, currency));
+        }
+      }
+
+      if (alertListNode) {
+        alertListNode.innerHTML = "";
+        if (!alerts.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.textContent = "All tracked categories are within a safe budget range this month.";
+          alertListNode.appendChild(empty);
+        } else {
+          alerts.forEach((alert) => renderBudgetAlertCard(alertListNode, alert, currency));
         }
       }
 
@@ -331,6 +449,15 @@
       if (insightsNode) {
         insightsNode.innerHTML = `<div class="empty-state">${message}</div>`;
       }
+      if (alertSummaryNode) {
+        alertSummaryNode.textContent = message;
+      }
+      if (alertListNode) {
+        alertListNode.innerHTML = `<div class="empty-state">${message}</div>`;
+      }
+      if (alertCountChip) {
+        alertCountChip.textContent = "Alerts unavailable";
+      }
     }
 
     async function loadBudgetData(monthValue) {
@@ -345,12 +472,14 @@
       }
 
       try {
-        const [budgets, expenses] = await Promise.all([
+        const [budgets, expenses, alertsData] = await Promise.all([
           app.fetchBudgets?.({ month: nextMonth }) || [],
           app.fetchExpenses?.() || [],
+          app.fetchBudgetAlerts?.({ month: nextMonth }) || emptyAlertsData(),
         ]);
         state.budgets = Array.isArray(budgets) ? budgets : [];
         state.expenses = Array.isArray(expenses) ? expenses : [];
+        state.alertsData = alertsData && typeof alertsData === "object" ? alertsData : emptyAlertsData();
         render();
       } catch (error) {
         renderLoadError(error.message || "Unable to load budget data.");

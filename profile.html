@@ -66,9 +66,13 @@
                   <input id="profileEmail" name="email" type="email" required>
                   <small class="input-error" data-error-for="email"></small>
                 </div>
-                <div class="field">
-                  <label for="avatarUrl">Avatar URL</label>
-                  <input id="avatarUrl" name="avatar" type="url" placeholder="https://example.com/avatar.png">
+                <div class="field field-full">
+                  <label>Choose avatar</label>
+                  <input id="profileAvatarValue" name="avatar" type="hidden">
+                  <div id="avatarPicker" class="avatar-picker" aria-label="Choose profile avatar"></div>
+                  <p id="avatarPickerHint" class="avatar-picker-hint">
+                    Pick a preset avatar or use your initials.
+                  </p>
                   <small class="input-error" data-error-for="avatar"></small>
                 </div>
                 <div class="field">
