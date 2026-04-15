@@ -8,6 +8,7 @@ const expensesRoutes = require("./routes/expenses");
 const splitRoutes = require("./routes/split");
 const budgetRoutes = require("./routes/budget");
 const userRoutes = require("./routes/user");
+const notificationsRoutes = require("./routes/notifications");
 const { notFound, errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
@@ -41,6 +42,7 @@ app.use("/api/expenses", expensesRoutes);
 app.use("/api/split", splitRoutes);
 app.use("/api/budget", budgetRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

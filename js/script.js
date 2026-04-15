@@ -534,6 +534,16 @@
     });
 
   app.fetchExpenseAnalytics = () => request("/expenses/analytics");
+  app.fetchExpenseSummary = (params = {}) => request(`/expenses/summary${buildQuery(params)}`);
+  app.fetchNotifications = (params = {}) => request(`/notifications${buildQuery(params)}`);
+  app.markNotificationRead = (notificationId) =>
+    request(`/notifications/${notificationId}/read`, {
+      method: "PUT",
+    });
+  app.markAllNotificationsRead = () =>
+    request("/notifications/read-all", {
+      method: "PUT",
+    });
 
   app.createBudget = (payload) =>
     request("/budget", {

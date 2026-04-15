@@ -5,6 +5,7 @@
   let dashboardMetricNodes = [];
   let metricFitFrame = 0;
   let metricResizeBound = false;
+  let notificationPollHandle = 0;
 
   function fitMetricValue(node) {
     if (!node) {
@@ -170,6 +171,238 @@
       note.textContent = `${alerts.length - 3} more alert${alerts.length - 3 === 1 ? "" : "s"} available in Budget Planner.`;
       listNode.appendChild(note);
     }
+  }
+
+  function relativeTimeLabel(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "Just now";
+    }
+
+    const diffMs = Date.now() - date.getTime();
+    const diffMinutes = Math.max(Math.round(diffMs / 60000), 0);
+    if (diffMinutes < 1) {
+      return "Just now";
+    }
+    if (diffMinutes < 60) {
+      return `${diffMinutes} min ago`;
+    }
+
+    const diffHours = Math.round(diffMinutes / 60);
+    if (diffHours < 24) {
+      return `${diffHours} hr${diffHours === 1 ? "" : "s"} ago`;
+    }
+
+    const diffDays = Math.round(diffHours / 24);
+    if (diffDays < 7) {
+      return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+    }
+
+    return date.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  function notificationVariant(type) {
+    if (type === "budget-exceeded") {
+      return { tone: "danger", label: "Exceeded" };
+    }
+    if (type === "budget-warning") {
+      return { tone: "warning", label: "Alert" };
+    }
+    return { tone: "success", label: "Expense" };
+  }
+
+  function notificationSummary(unreadCount, totalCount) {
+    const unread = Number(unreadCount || 0);
+    const total = Number(totalCount || 0);
+    if (!total) {
+      return "No notifications yet";
+    }
+    if (!unread) {
+      return `${total} notification${total === 1 ? "" : "s"} | all caught up`;
+    }
+    return `${unread} unread of ${total} notification${total === 1 ? "" : "s"}`;
+  }
+
+  function renderNotifications(listNode, badgeNode, metaNode, markAllButton, payload) {
+    if (!listNode) {
+      return;
+    }
+
+    const notifications = Array.isArray(payload?.notifications) ? payload.notifications : [];
+    const unreadCount = Number(payload?.unreadCount || 0);
+
+    if (badgeNode) {
+      badgeNode.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+      badgeNode.classList.toggle("hidden-state", unreadCount < 1);
+    }
+
+    if (metaNode) {
+      metaNode.textContent = notificationSummary(unreadCount, notifications.length);
+    }
+
+    if (markAllButton) {
+      markAllButton.disabled = unreadCount < 1;
+    }
+
+    listNode.innerHTML = "";
+    if (!notifications.length) {
+      listNode.innerHTML = '<div class="empty-state">You do not have any notifications yet.</div>';
+      return;
+    }
+
+    notifications.forEach((item) => {
+      const variant = notificationVariant(item.type);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `notification-item ${variant.tone}${item.isRead ? "" : " unread"}`;
+      button.setAttribute("data-notification-id", String(item.id));
+
+      const head = document.createElement("div");
+      head.className = "notification-item-head";
+
+      const title = document.createElement("strong");
+      title.textContent = item.title || "Notification";
+
+      const tag = document.createElement("span");
+      tag.className = `notification-tag ${variant.tone}`;
+      tag.textContent = variant.label;
+      head.append(title, tag);
+
+      const body = document.createElement("p");
+      body.textContent = item.message || "";
+
+      const time = document.createElement("span");
+      time.className = "notification-time";
+      time.textContent = relativeTimeLabel(item.createdAt);
+
+      button.append(head, body, time);
+      listNode.appendChild(button);
+    });
+  }
+
+  async function initNotificationCenter() {
+    const shell = document.getElementById("dashboardNotificationShell");
+    if (!shell) {
+      return;
+    }
+
+    const toggleButton = document.getElementById("notificationToggleBtn");
+    const panel = document.getElementById("notificationPanel");
+    const listNode = document.getElementById("notificationList");
+    const metaNode = document.getElementById("notificationPanelMeta");
+    const badgeNode = document.getElementById("notificationUnreadBadge");
+    const markAllButton = document.getElementById("markAllNotificationsBtn");
+    let currentPayload = {
+      unreadCount: 0,
+      notifications: [],
+    };
+
+    async function loadNotifications(options = {}) {
+      const silent = Boolean(options.silent);
+
+      try {
+        const payload = await app.fetchNotifications?.({ limit: 12 });
+        currentPayload = payload && typeof payload === "object"
+          ? payload
+          : { unreadCount: 0, notifications: [] };
+        renderNotifications(listNode, badgeNode, metaNode, markAllButton, currentPayload);
+      } catch (error) {
+        if (!silent && listNode) {
+          listNode.innerHTML = `<div class="empty-state">${error.message}</div>`;
+        }
+        if (metaNode && !silent) {
+          metaNode.textContent = "Notifications unavailable";
+        }
+      }
+    }
+
+    function openPanel() {
+      panel?.classList.remove("hidden-state");
+      toggleButton?.setAttribute("aria-expanded", "true");
+    }
+
+    function closePanel() {
+      panel?.classList.add("hidden-state");
+      toggleButton?.setAttribute("aria-expanded", "false");
+    }
+
+    toggleButton?.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const isClosed = panel?.classList.contains("hidden-state");
+      if (isClosed) {
+        openPanel();
+        await loadNotifications();
+        return;
+      }
+
+      closePanel();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!shell.contains(event.target)) {
+        closePanel();
+      }
+    });
+
+    panel?.addEventListener("click", async (event) => {
+      const itemButton = event.target.closest("[data-notification-id]");
+      if (!itemButton) {
+        return;
+      }
+
+      const notificationId = Number(itemButton.getAttribute("data-notification-id"));
+      if (!notificationId) {
+        return;
+      }
+
+      itemButton.disabled = true;
+      try {
+        await app.markNotificationRead?.(notificationId);
+        currentPayload.notifications = (currentPayload.notifications || []).map((notification) =>
+          Number(notification.id) === notificationId
+            ? { ...notification, isRead: true }
+            : notification
+        );
+        currentPayload.unreadCount = Math.max(Number(currentPayload.unreadCount || 0) - 1, 0);
+        renderNotifications(listNode, badgeNode, metaNode, markAllButton, currentPayload);
+      } catch (error) {
+        itemButton.disabled = false;
+      }
+    });
+
+    markAllButton?.addEventListener("click", async () => {
+      markAllButton.disabled = true;
+      try {
+        await app.markAllNotificationsRead?.();
+        currentPayload = {
+          ...currentPayload,
+          unreadCount: 0,
+          notifications: (currentPayload.notifications || []).map((notification) => ({
+            ...notification,
+            isRead: true,
+          })),
+        };
+        renderNotifications(listNode, badgeNode, metaNode, markAllButton, currentPayload);
+      } catch (error) {
+        markAllButton.disabled = false;
+      } finally {
+        if (markAllButton && Number(currentPayload.unreadCount || 0) > 0) {
+          markAllButton.disabled = false;
+        }
+      }
+    });
+
+    await loadNotifications({ silent: true });
+    if (notificationPollHandle) {
+      window.clearInterval(notificationPollHandle);
+    }
+    notificationPollHandle = window.setInterval(() => {
+      loadNotifications({ silent: true });
+    }, 30000);
   }
 
   function initSidebar() {
@@ -847,6 +1080,7 @@
 
   document.addEventListener("DOMContentLoaded", async () => {
     initSidebar();
+    await initNotificationCenter();
     await initDashboardPage();
     await initReportsPage();
     await initProfilePage();
